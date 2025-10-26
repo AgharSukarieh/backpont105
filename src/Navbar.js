@@ -1,12 +1,12 @@
 // Navbar.js
 import React, { useContext, useState } from "react";
-import { ContestUserContext } from "./Hook/UserContext";
+import {  UserContext } from "./Hook/UserContext";
 import { Link } from "react-router-dom";
-import NotificationDropdown from "./Notification/NotificationDropdown"; 
+import NotificationDropdown from "./Pages/Notification/NotificationDropdown"; 
 
 const Navbar = ({ onLogout, setPage }) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user } = useContext(ContestUserContext);
+  const { user } = useContext(UserContext);
 
   // مثال للإشعارات
   const notifications = [

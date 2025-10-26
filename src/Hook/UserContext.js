@@ -1,18 +1,18 @@
 import React, { createContext, useState } from "react";
 
-export const ContestUserContext = createContext();
+export const UserContext = createContext();
 
-export const ContestUserProvider = ({ children }) => {
-
-  const [user, setUser] = useState({
-    name: "Ahmed Hassan",
-    email: "ahmed@example.com"
+export const UserProvider = ({ children }) => {
+  const [user, setUser]=  useState({
+    name: "Ahmed",
+    email: "ahmed@example.com",
+    role: "User"
   });
-
-
+  
+  
   return (
-    <ContestUserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser }}>
       {children}
-    </ContestUserContext.Provider>
+    </UserContext.Provider>
   );
 };
