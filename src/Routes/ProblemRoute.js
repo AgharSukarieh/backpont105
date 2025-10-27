@@ -1,14 +1,14 @@
 import React from "react";
 import { Route } from "react-router-dom";
-import Problem from "../Pages/Problem/Porblem";
-import Problems from "../Pages/Problem/AllProblem";
+import Problem from "../Pages/Problem/ListPorblems";
+import Problems from "../Pages/Problem/Problem";
 
 export const ProblemRoutes = (
   <>
 
     <Route path="/problems" element={<Problems />} />
 
-    <Route path="/problem/:id" element={<Problem />} />
+    <Route path="/Problem/:id" element={<Problem />} />
     
   </>
 );
