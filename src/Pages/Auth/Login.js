@@ -1,35 +1,79 @@
 
-import React, { useState } from "react";
+import React, { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import AuthCard from "./AuthCard";
+import LandingNav from "../../components/LandingNav";
+import logoPart from "../../assets/logo_part.png";
+import "./login.css";
 
-const Login = ({ onLogin, setPage }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+const navLinks = [
+  { label: "استكشف", href: "#explore" },
+  { label: "الأسئلة", href: "#questions" },
+  { label: "المبرمج", href: "#coder" },
+  { label: "تسجيل الدخول", to: "/login" },
+];
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onLogin({ name: "Ahmed", email, university: "Cairo University" });
-    alert("Login successful! Welcome to ArabCode.");
-  };
+const Login = () => {
+  const navigate = useNavigate();
+
+  const handleNavClick = useCallback(
+    (event, link) => {
+      if (link.to === "/login") {
+        event.preventDefault();
+        return;
+      }
+
+      if (link.href?.startsWith("#")) {
+        event.preventDefault();
+        navigate(`/${link.href}`);
+      }
+    },
+    [navigate]
+  );
 
   return (
-    <div className="min-h-screen gradient-bg flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-xl">
-        <h2 className="text-3xl font-extrabold text-gray-900 text-center">Sign in to ArabCode</h2>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <label>Email Address</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="mt-1 block w-full px-3 py-2 border rounded-md" />
-          </div>
-          <div>
-            <label>Password</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" className="mt-1 block w-full px-3 py-2 border rounded-md" />
-          </div>
-          <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md">Sign In</button>
-        </form>
-        <p className="text-sm text-gray-600 text-center">
-          Don't have an account? <button onClick={() => setPage("signup")} className="text-indigo-600">Sign up here</button>
-        </p>
-      </div>
+    <div className="login-page">
+      <header className="landing-header landing-header--auth">
+        <LandingNav
+          links={navLinks}
+          onLinkClick={handleNavClick}
+          logo={<img src={logoPart} alt="عرب كودرز" />}
+        />
+      </header>
+
+      <main className="login-page__main">
+        <div className="login-card-container">
+          <AuthCard initialMode="login" showHeader={false} showFooter={false} />
+        </div>
+      </main>
+
+      <footer className="landing-footer--auth">
+        <div className="landing-footer__row">
+          <span className="landing-footer__text landing-footer__text--flag">
+          🇯🇴  المملكة الأردنية الهاشمية 
+          </span>
+          <ul className="landing-footer__nav" role="list">
+            <li>
+              <a href="#rewards">المكافآت</a>
+            </li>
+            <li>
+              <a href="#jobs">الوظائف</a>
+            </li>
+            <li>
+              <a href="#help-center">مركز المساعدة</a>
+            </li>
+            <li>
+              <a href="#terms">الشروط</a>
+            </li>
+            <li>
+              <a href="#request">الطلب</a>
+            </li>
+          </ul>
+          <span className="landing-footer__text">
+            حقوق الابتكار والنشر © عرب كودرز
+          </span>
+        </div>
+      </footer>
     </div>
   );
 };

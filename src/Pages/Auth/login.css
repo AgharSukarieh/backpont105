@@ -1,0 +1,208 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    var(--landing-primary) 0%,
+    var(--landing-primary-dark) 100%
+  );
+}
+
+.landing-header--auth {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  /* padding-bottom: clamp(32px, 5vw, 60px); */
+}
+
+.landing-header--auth .landing-nav {
+  padding-top: clamp(18px, 4vw, 32px);
+}
+
+/* .login-page__main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: clamp(32px, 6vw, 96px) clamp(16px, 6vw, 96px) clamp(48px, 8vw, 120px);
+} */
+
+.login-card-container {
+  width: min(1080px, 100%);
+  display: flex;
+  justify-content: center;
+}
+
+.login-card-container .auth-card {
+  width: 100%;
+}
+
+.login-card-container .card-flip-container {
+  width: 79%;
+}
+
+.login-card-container .login-card {
+  width: 80%;
+}
+
+@media (max-width: 768px) {
+  .landing-header--auth {
+    /* padding-bottom: clamp(24px, 6vw, 40px); */
+  }
+
+  .login-page__main {
+    padding: clamp(24px, 8vw, 56px) clamp(12px, 6vw, 56px);
+  }
+}
+
+@media (max-width: 520px) {
+  .landing-header--auth .landing-nav {
+    padding-top: 16px;
+  }
+
+  .login-page {
+    background: var(--landing-primary-dark);
+  }
+}
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    var(--landing-primary) 0%,
+    var(--landing-primary-dark) 100%
+  );
+}
+
+.landing-header--auth {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  /* padding-bottom: clamp(32px, 5vw, 60px); */
+}
+
+.landing-header--auth .landing-nav {
+  padding-top: clamp(20px, 4vw, 32px);
+}
+
+/* .login-page__main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: clamp(32px, 6vw, 96px) clamp(16px, 6vw, 96px);
+} */
+
+.login-page__main > * {
+  width: min(1100px, 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.login-page__main > * > .main-content {
+  flex: 1;
+}
+
+.landing-footer--auth {
+  background: none;
+  clip-path: none;
+  min-height: auto;
+  margin-top: auto;
+   padding-top: 18px;
+   padding-bottom:10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.landing-footer--auth .landing-footer__row {
+  width: min(1122px, 95%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(16px, 4vw, 56px);
+  position: static;
+  top: auto;
+  left: auto;
+  padding-top: 12px;
+}
+
+.landing-footer--auth .landing-footer__text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: clamp(0.72rem, 1.6vw, 0.85rem);
+  line-height: 1.4;
+}
+
+.landing-footer--auth .landing-footer__text--flag {
+  font-weight: 600;
+}
+
+.landing-footer--auth .landing-footer__nav {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 3vw, 40px);
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  text-align: center;
+}
+
+.landing-footer--auth .landing-footer__nav li {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+}
+
+.landing-footer--auth .landing-footer__nav li + li::before {
+  content: "";
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.35);
+  display: inline-block;
+}
+
+.landing-footer--auth .landing-footer__nav a {
+  text-decoration: none;
+  color: inherit;
+  font-size: clamp(0.68rem, 1.8vw, 0.82rem);
+  transition: opacity 0.2s ease;
+}
+
+.landing-footer--auth .landing-footer__nav a:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .landing-header--auth {
+    padding-bottom: clamp(24px, 6vw, 40px);
+  }
+
+  .login-page__main {
+    padding: clamp(24px, 8vw, 56px) clamp(12px, 6vw, 56px);
+  }
+}
+
+@media (max-width: 520px) {
+  .login-page {
+    background: var(--landing-primary-dark);
+  }
+
+  .landing-header--auth .landing-nav {
+    padding-top: 16px;
+  }
+
+  .landing-footer--auth .landing-footer__text {
+    font-size: 0.68rem;
+  }
+
+  .landing-footer--auth .landing-footer__nav a {
+    font-size: 0.64rem;
+  }
+}
+

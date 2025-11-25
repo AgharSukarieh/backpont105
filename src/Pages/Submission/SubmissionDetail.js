@@ -1,71 +1,188 @@
-// SubmissionDetail.js
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
-// بيانات وهمية مشابهة للـ UserSubmissions
-const submissionsData = [
-  { id: 111, problemId: 45, userId: 1, titleProblem: "Max Number", code: "console.log('Hello World');", isAccepted: 3, verdict: "صحيحة !", submitAt: "2025-10-21T17:51:51.7342495", memoryUsed: 1024, executionTime: 45 },
-  { id: 110, problemId: 44, userId: 1, titleProblem: "Sum Two Numbers", code: "let sum = a + b;", isAccepted: 2, verdict: "خطأ", submitAt: "2025-10-21T16:30:00.123", memoryUsed: 710, executionTime: 60 },
-  { id: 109, problemId: 43, userId: 1, titleProblem: "Binary Search", code: "function binarySearch(arr, target) { }", isAccepted: 1, verdict: "قيد المراجعة", submitAt: "2025-10-21T15:45:12.456", memoryUsed: 512, executionTime: 30 },
-];
+import { getSubmissionById } from "../../Service/submissionServices";
+import "./submissionDetail.css";
 
 const SubmissionDetail = () => {
   const { id } = useParams();
+  const [submission, setSubmission] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
-  // البحث عن الـ Submission بالـ id
-  const submission = submissionsData.find(sub => sub.id === parseInt(id));
+  const fetchSubmission = async () => {
+    setLoading(true);
+    try {
+      const data = await getSubmissionById(id);
+      setSubmission(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (!submission) {
+  useEffect(() => {
+    fetchSubmission();
+  }, [id]);
+
+  if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">خطأ: لم يتم العثور على الإرسالية!</h2>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-5 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors duration-200"
-        >
-          العودة
-        </button>
+      <div className="submission-detail-page">
+        <div className="submission-detail-loading">
+          <div className="submission-detail-spinner"></div>
+          <p>جاري تحميل تفاصيل المحاولة...</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-5xl mx-auto p-6 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-indigo-600">{submission.titleProblem || `Problem ${submission.problemId}`}</h1>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 shadow transition-colors duration-200"
-        >
-          العودة
-        </button>
+  if (!submission) {
+    return (
+      <div className="submission-detail-page">
+        <div className="submission-detail-error">
+          <i className="bx bx-error-circle"></i>
+          <h2>لم يتم العثور على المحاولة</h2>
+          <button onClick={() => navigate(-1)} className="submission-detail-btn submission-detail-btn--secondary">
+            <i className="bx bx-arrow-back"></i>
+            العودة
+          </button>
+        </div>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* تفاصيل الإرسال */}
-        <div className="bg-indigo-50 p-6 rounded-xl shadow-lg border border-indigo-100 space-y-3">
-          <p><strong className="text-gray-700">حالة الإرسال:</strong> 
-            <span className={`ml-2 px-2 py-1 rounded-full text-sm font-medium ${
-              submission.isAccepted === 3 ? "bg-green-100 text-green-800" :
-              submission.isAccepted === 2 ? "bg-red-100 text-red-800" :
-              "bg-yellow-100 text-yellow-800"
-            }`}>
-              {submission.isAccepted === 3 ? "مقبول" : submission.isAccepted === 2 ? "مرفوض" : "قيد المراجعة"}
-            </span>
-          </p>
-          <p><strong className="text-gray-700">النتيجة:</strong> {submission.verdict}</p>
-          <p><strong className="text-gray-700">وقت التنفيذ:</strong> {submission.executionTime} ms</p>
-          <p><strong className="text-gray-700">الذاكرة المستهلكة:</strong> {submission.memoryUsed} KB</p>
-          <p><strong className="text-gray-700">تاريخ الإرسال:</strong> {new Date(submission.submitAt).toLocaleString("ar-EG")}</p>
+  const getStatusInfo = (isAccepted) => {
+    if (isAccepted === 3 || isAccepted === 2) {
+      return {
+        label: "مقبولة",
+        icon: "bx-check-circle",
+        className: "submission-detail-status--accepted"
+      };
+    } else {
+      return {
+        label: "مرفوضة",
+        icon: "bx-x-circle",
+        className: "submission-detail-status--rejected"
+      };
+    }
+  };
+
+  const statusInfo = getStatusInfo(submission.isAccepted);
+
+  const handleCopyCode = () => {
+    if (submission?.code) {
+      navigator.clipboard.writeText(submission.code).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(err => {
+        console.error('Failed to copy code:', err);
+      });
+    }
+  };
+
+  return (
+    <div className="submission-detail-page">
+      <div className="submission-detail-container">
+        {/* Header */}
+        <div className="submission-detail-header">
+          <button
+            onClick={() => navigate(-1)}
+            className="submission-detail-back-btn"
+            aria-label="العودة"
+          >
+            <i className="bx bx-arrow-back"></i>
+          </button>
+          <div className="submission-detail-header-content">
+            <h1 className="submission-detail-title">{submission.titleProblem}</h1>
+            <div className={`submission-detail-status ${statusInfo.className}`}>
+              <i className={`bx ${statusInfo.icon}`}></i>
+              <span>{statusInfo.label}</span>
+            </div>
+          </div>
         </div>
 
-        {/* الكود المرسل */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <h2 className="text-lg font-semibold mb-3 text-gray-700">الكود المرسل</h2>
-          <pre className="bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm text-gray-800 font-mono shadow-inner">
-            {submission.code}
-          </pre>
+        {/* Main Content */}
+        <div className="submission-detail-content">
+          {/* Info Cards */}
+          <div className="submission-detail-info-grid">
+            <div className="submission-detail-info-card">
+              <div className="submission-detail-info-icon" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+                <i className="bx bx-calendar"></i>
+              </div>
+              <div className="submission-detail-info-text">
+                <span className="submission-detail-info-label">تاريخ الإرسال</span>
+                <span className="submission-detail-info-value">
+                  {new Date(submission.submitAt).toLocaleDateString("ar-EG", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })}
+                </span>
+              </div>
+            </div>
+
+            <div className="submission-detail-info-card">
+              <div className="submission-detail-info-icon" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}>
+                <i className="bx bx-memory-card"></i>
+              </div>
+              <div className="submission-detail-info-text">
+                <span className="submission-detail-info-label">الذاكرة المستخدمة</span>
+                <span className="submission-detail-info-value">{submission.memoryUsed} KB</span>
+              </div>
+            </div>
+
+            <div className="submission-detail-info-card">
+              <div className="submission-detail-info-icon" style={{ background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" }}>
+                <i className="bx bx-time"></i>
+              </div>
+              <div className="submission-detail-info-text">
+                <span className="submission-detail-info-label">وقت التنفيذ</span>
+                <span className="submission-detail-info-value">{submission.executionTime} ms</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Code Section */}
+          <div className="submission-detail-section">
+            <div className="submission-detail-section-header">
+              <i className="bx bx-code-alt"></i>
+              <h2>الكود المرسل</h2>
+              <button 
+                className="submission-detail-copy-btn"
+                onClick={handleCopyCode}
+                title={copied ? "تم النسخ!" : "نسخ الكود"}
+              >
+                <i className={`bx ${copied ? 'bx-check' : 'bx-copy'}`}></i>
+                <span>{copied ? 'تم النسخ' : 'نسخ'}</span>
+              </button>
+            </div>
+            <div className="submission-detail-code-wrapper">
+              <div className="submission-detail-code-container">
+                <div className="submission-detail-code-lines">
+                  {submission.code.split('\n').map((_, index) => (
+                    <div key={index} className="submission-detail-code-line-number">
+                      {index + 1}
+                    </div>
+                  ))}
+                </div>
+                <pre className="submission-detail-code">{submission.code}</pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Verdict Section */}
+          <div className="submission-detail-section">
+            <div className="submission-detail-section-header">
+              <i className="bx bx-message-square-detail"></i>
+              <h2>النتيجة</h2>
+            </div>
+            <div className="submission-detail-verdict-wrapper">
+              <pre className="submission-detail-verdict">{submission.verdict}</pre>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -33,7 +33,7 @@ const LoadingPage = () => {
         transition={{ repeat: Infinity, duration: 2 }}
         style={{ fontSize: "1.5rem", textAlign: "center" }}
       >
-        Running algorithm...
+        جارٍ تحميل الخوارزميات...
       </motion.h2>
 
       <motion.p
@@ -41,7 +41,7 @@ const LoadingPage = () => {
         transition={{ repeat: Infinity, duration: 3 }}
         style={{ fontSize: "0.9rem", color: "#888", marginTop: "10px" }}
       >
-        Compiling your code ⚙️
+        يرجى الانتظار ⚙️
       </motion.p>
     </div>
   );

@@ -1,0 +1,153 @@
+.landing-nav {
+  width: min(1431px, 98%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 2px;
+  padding-inline: clamp(10px, 2vw, 24px);
+  color: #ffffff;
+  direction: rtl;
+  gap: 24px;
+}
+
+.landing-nav--with-divider {
+  padding-bottom: 14px;
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding-inline: clamp(10px, 2vw, 24px);
+}
+
+.landing-nav--with-divider::after {
+  content: "";
+  position: absolute;
+  left: 35px;
+  right: 42px;
+  bottom: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+}
+
+ .landing-nav__primary {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 18px;
+   flex: 1;
+ }
+
+ .landing-nav__logo {
+   display: flex;
+   align-items: center;
+   justify-content: flex-start;
+   gap: 12px;
+ }
+
+ .landing-nav__links {
+   display: flex;
+   gap: 16px;
+   list-style: none;
+   margin: 0;
+   padding: 0;
+   font-size: 1.6rem;
+   font-weight: 668;
+  justify-content: center;
+}
+
+.landing-nav--with-divider .landing-nav__primary {
+  justify-content: flex-start;
+}
+
+.landing-nav--with-divider .landing-nav__links {
+  justify-content: flex-start;
+ }
+
+ .landing-nav__links a {
+   text-decoration: none;
+   color: inherit;
+   cursor: pointer;
+   transition: opacity 0.2s ease;
+ }
+
+.landing-nav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  text-align: center;
+  position: relative;
+  padding-bottom: 6px;
+  transition: opacity 0.2s ease;
+}
+
+.landing-nav__link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s ease;
+}
+
+.landing-nav__link.active::after {
+  transform: scaleX(1);
+}
+
+.landing-nav__links a:hover .landing-nav__link,
+.landing-nav__link.active {
+  opacity: 0.8;
+}
+
+.landing-nav__links a:hover .landing-nav__link::after,
+.landing-nav__link.active::after {
+  transform: scaleX(1);
+}
+
+.landing-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .landing-nav {
+    flex-direction: column-reverse;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .landing-nav--with-divider {
+    padding-bottom: 24px;
+    width: 100%;
+    margin: 0;
+    padding-inline: 16px;
+  }
+
+  .landing-nav--with-divider::after {
+    left: 24px;
+    right: 24px;
+    bottom: 4px;
+  }
+
+  .landing-nav__primary {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .landing-nav__links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .landing-nav__actions {
+    order: -1;
+  }
+}
+
+

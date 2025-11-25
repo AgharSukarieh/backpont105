@@ -1,108 +1,240 @@
-// UserSubmissions.js
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { selectAuthToken, selectAuthSession } from "../../store/authSlice";
+import { getUserSubmissions } from "../../Service/submissionServices";
+import "./submissions.css";
 
-const submissionsData = [
-  { id: 111, problemId: 45, titleProblem: "Max Number", isAccepted: 3, verdict: "صحيحة !", submitAt: "2025-10-21T17:51:51.734", memoryUsed: 1024, executionTime: 45 },
-  { id: 110, problemId: 44, titleProblem: "Sum Two Numbers", isAccepted: 2, verdict: "خطأ", submitAt: "2025-10-21T16:30:00.123", memoryUsed: 710, executionTime: 60 },
-  { id: 109, problemId: 43, titleProblem: "Binary Search", isAccepted: 1, verdict: "قيد المراجعة", submitAt: "2025-10-21T15:45:12.456", memoryUsed: 512, executionTime: 30 },
-  { id: 108, problemId: 42, titleProblem: "Bubble Sort", isAccepted: 3, verdict: "صحيحة !", submitAt: "2025-10-20T18:20:00.789", memoryUsed: 1024, executionTime: 70 },
-  { id: 107, problemId: 41, titleProblem: "Dijkstra", isAccepted: 2, verdict: "خطأ", submitAt: "2025-10-20T17:10:30.234", memoryUsed: 800, executionTime: 120 },
-  { id: 106, problemId: 40, titleProblem: "Fibonacci", isAccepted: 3, verdict: "صحيحة !", submitAt: "2025-10-19T14:05:10.987", memoryUsed: 256, executionTime: 25 },
-  { id: 105, problemId: 39, titleProblem: "Factorial", isAccepted: 1, verdict: "قيد المراجعة", submitAt: "2025-10-19T13:30:45.654", memoryUsed: 128, executionTime: 10 },
-  { id: 104, problemId: 38, titleProblem: "Quick Sort", isAccepted: 3, verdict: "صحيحة !", submitAt: "2025-10-18T12:20:20.321", memoryUsed: 900, executionTime: 80 },
-  { id: 103, problemId: 37, titleProblem: "Merge Sort", isAccepted: 2, verdict: "خطأ", submitAt: "2025-10-18T11:15:15.987", memoryUsed: 950, executionTime: 95 },
-  { id: 102, problemId: 36, titleProblem: "DFS Graph", isAccepted: 3, verdict: "صحيحة !", submitAt: "2025-10-17T10:05:10.123", memoryUsed: 650, executionTime: 40 },
-  { id: 101, problemId: 35, titleProblem: "BFS Graph", isAccepted: 1, verdict: "قيد المراجعة", submitAt: "2025-10-16T09:50:05.456", memoryUsed: 700, executionTime: 55 },
-  { id: 100, problemId: 34, titleProblem: "Prime Check", isAccepted: 3, verdict: "صحيحة !", submitAt: "2025-10-15T08:40:30.789", memoryUsed: 200, executionTime: 15 },
-  // بيانات إضافية للتأكد من ظهور Pagination
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: 99 - i,
-    problemId: i + 10,
-    titleProblem: `Problem ${i + 10}`,
-    isAccepted: (i % 3) + 1,
-    verdict: i % 3 === 0 ? "صحيحة !" : i % 3 === 1 ? "خطأ" : "قيد المراجعة",
-    submitAt: `2025-10-${(i % 30) + 1}T12:00:00.000`,
-    memoryUsed: 100 + i * 10,
-    executionTime: 10 + i * 5,
-  }))
-];
-
-const UserSubmissions = () => {
+const Submissions = ({ onBack }) => {
+  const { userId: userIdParam } = useParams();
+  const token = useSelector(selectAuthToken);
+  const session = useSelector(selectAuthSession);
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10 ;
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 12;
   const navigate = useNavigate();
+  
+  // استخدام onBack إذا كان موجود، وإلا الرجوع للدشبورد مع فتح البروفايل
+  const handleBack = onBack || (() => {
+    navigate('/dashboard', { state: { openProfile: true } });
+  });
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = submissionsData.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(submissionsData.length / itemsPerPage);
+  // استخدام userId من الـ params أو من الـ session
+  const userId = userIdParam || session?.responseUserDTO?.id;
 
-  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
+  // طباعة التوكن والـ session
+  useEffect(() => {
+    console.log("🔑 Token:", token);
+    console.log("👤 Session:", session);
+    console.log("🆔 User ID from params:", userIdParam);
+    console.log("🆔 User ID from session:", session?.responseUserDTO?.id);
+    console.log("✅ Final User ID:", userId);
+  }, [token, session, userIdParam, userId]);
+
+  const fetchSubmissions = async (page) => {
+    setLoading(true);
+    try {
+      const data = await getUserSubmissions(userId, page, itemsPerPage);
+      console.log("📦 Submissions data:", data);
+      
+      // Handle array response directly
+      if (Array.isArray(data)) {
+        setSubmissions(data);
+        setTotalPages(1); // Since API returns all items, we'll use client-side pagination
+      } else {
+        setSubmissions(data.items || data || []);
+        setTotalPages(data.totalPages || 1);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching submissions:", err);
+      setSubmissions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      fetchSubmissions(currentPage);
+    }
+  }, [userId, currentPage]);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const getStatusInfo = (isAccepted) => {
+    if (isAccepted === 3 || isAccepted === 2) {
+      return {
+        label: "مقبولة",
+        icon: "bx-check-circle",
+        className: "submissions-status--accepted"
+      };
+    } else if (isAccepted === 0) {
+      return {
+        label: "مرفوضة",
+        icon: "bx-x-circle",
+        className: "submissions-status--rejected"
+      };
+    } else {
+      return {
+        label: "قيد التقييم",
+        icon: "bx-time-five",
+        className: "submissions-status--pending"
+      };
+    }
+  };
+
+  if (!userId && !loading) {
+    return (
+      <div className="submissions-page">
+        <div className="submissions-error">
+          <i className="bx bx-error-circle"></i>
+          <h2>خطأ في تحميل البيانات</h2>
+          <p>لم يتم العثور على معرف المستخدم. الرجاء تسجيل الدخول مرة أخرى.</p>
+          <button onClick={() => navigate("/login")} className="submission-detail-btn submission-detail-btn--secondary">
+            <i className="bx bx-log-in"></i>
+            تسجيل الدخول
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="submissions-page">
+        <div className="submissions-loading">
+          <div className="submissions-spinner"></div>
+          <p>جاري تحميل المحاولات...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold text-indigo-600 mb-6">سجل الإرساليات</h1>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-          <thead className="bg-indigo-50">
-            <tr>
-              <th className="px-4 py-2 text-right border-b">#</th>
-              <th className="px-4 py-2 text-right border-b">عنوان المسألة</th>
-              <th className="px-4 py-2 text-right border-b">النتيجة</th>
-              <th className="px-4 py-2 text-right border-b">الحالة</th>
-              <th className="px-4 py-2 text-right border-b">وقت التنفيذ (ms)</th>
-              <th className="px-4 py-2 text-right border-b">الذاكرة المستهلكة (KB)</th>
-              <th className="px-4 py-2 text-right border-b">تاريخ الإرسال</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentItems.map((sub) => (
-              <tr
-                key={sub.id}
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => navigate(`/submission/${sub.id}`)}
-              >
-                <td className="px-4 py-2 border-b text-right">{sub.id}</td>
-                <td className="px-4 py-2 border-b text-right">{sub.titleProblem || `Problem ${sub.problemId}`}</td>
-                <td className="px-4 py-2 border-b text-right">{sub.verdict}</td>
-                <td className="px-4 py-2 border-b text-right">
-                  {sub.isAccepted === 3 ? (
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">مقبول</span>
-                  ) : sub.isAccepted === 2 ? (
-                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">مرفوض</span>
-                  ) : (
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs">قيد المراجعة</span>
-                  )}
-                </td>
-                <td className="px-4 py-2 border-b text-right">{sub.executionTime}</td>
-                <td className="px-4 py-2 border-b text-right">{sub.memoryUsed}</td>
-                <td className="px-4 py-2 border-b text-right">{new Date(sub.submitAt).toLocaleString("ar-EG")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex justify-center mt-6 space-x-2">
-        {Array.from({ length: totalPages }, (_, i) => (
+    <div className="submissions-page">
+      <div className="submissions-container">
+        {/* Header */}
+        <div className="submissions-header">
           <button
-            key={i}
-            onClick={() => handlePageChange(i + 1)}
-            className={`px-3 py-1 rounded-md border ${
-              currentPage === i + 1
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-indigo-50"
-            }`}
+            onClick={handleBack}
+            className="submissions-back-btn"
+            aria-label="العودة"
           >
-            {i + 1}
+            <i className="bx bx-arrow-back"></i>
           </button>
-        ))}
+          <div className="submissions-header-content">
+            <h1 className="submissions-title">سجل المحاولات</h1>
+          </div>
+        </div>
+
+        {/* Submissions Table */}
+        {submissions.length === 0 ? (
+          <div className="submissions-empty">
+            <i className="bx bx-file"></i>
+            <h2>لا توجد محاولات بعد</h2>
+            <p>ابدأ بحل المسائل لرؤية محاولاتك هنا</p>
+          </div>
+        ) : (
+          <>
+            <div className="submissions-table-wrapper">
+              <table className="submissions-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>المسألة</th>
+                    <th>الحالة</th>
+                    <th>النتيجة</th>
+                    <th>الوقت</th>
+                    <th>الذاكرة</th>
+                    <th>التاريخ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissions.map((sub) => {
+                    const statusInfo = getStatusInfo(sub.isAccepted);
+                    return (
+                      <tr
+                        key={sub.id}
+                        onClick={() => navigate(`/submission/${sub.id}`)}
+                        className="submissions-row"
+                      >
+                        <td data-label="#">{sub.id}</td>
+                        <td data-label="المسألة" className="submissions-problem-title">
+                          {sub.titleProblem || `Problem ${sub.problemId}`}
+                        </td>
+                        <td data-label="الحالة">
+                          <span className={`submissions-status ${statusInfo.className}`}>
+                            <i className={`bx ${statusInfo.icon}`}></i>
+                            <span>{statusInfo.label}</span>
+                          </span>
+                        </td>
+                        <td data-label="النتيجة" className="submissions-verdict">
+                          {sub.verdict}
+                        </td>
+                        <td data-label="الوقت">
+                          {sub.executionTime > 0 ? `${sub.executionTime} ms` : '-'}
+                        </td>
+                        <td data-label="الذاكرة">
+                          {sub.memoryUsed > 0 ? `${sub.memoryUsed} KB` : '-'}
+                        </td>
+                        <td data-label="التاريخ">
+                          {new Date(sub.submitAt).toLocaleDateString("ar-EG", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="submissions-pagination">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="submissions-pagination-btn"
+                >
+                  <i className="bx bx-chevron-right"></i>
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`submissions-pagination-btn ${
+                      currentPage === page ? "submissions-pagination-btn--active" : ""
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="submissions-pagination-btn"
+                >
+                  <i className="bx bx-chevron-left"></i>
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
 };
 
-export default UserSubmissions;
+export default Submissions;

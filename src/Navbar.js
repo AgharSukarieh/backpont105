@@ -8,31 +8,9 @@ const Navbar = ({ onLogout, setPage }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user } = useContext(UserContext);
 
-  // مثال للإشعارات
-  const notifications = [
-    {
-      id: 35,
-      title: "Testing1",
-      createdAt: "2025-10-21T17:37:30.9",
-      isRead: false,
-    },
-    {
-      id: 32,
-      title: "Testing2",
-      createdAt: "2025-10-18T18:02:48.55",
-      isRead: false,
-    },
-    {
-      id: 31,
-      title: "Testing1",
-      createdAt: "2025-10-18T18:02:48.0166667",
-      isRead: false,
-    },
-  ];
-
   return (
     <nav dir="rtl" className="bg-white shadow-md border-b-2 border-indigo-500">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div>
         <div className="flex justify-between items-center h-14">
           {/* الشعار */}
           <div className="flex items-center space-x-reverse space-x-2">
@@ -42,7 +20,7 @@ const Navbar = ({ onLogout, setPage }) => {
 
           {/* روابط سطح المكتب */}
           <div className="hidden md:flex items-center space-x-reverse space-x-5">
-            <Link to={"Userprofile"} className="text-sm text-gray-700 hover:text-indigo-600 transition-colors duration-200">الملف الشخصي</Link>
+            <Link to={user ? `/Profile/${user.id}` : "/login"} className="text-sm text-gray-700 hover:text-indigo-600 transition-colors duration-200">الملف الشخصي</Link>
             <Link to={"problems"} className="text-sm text-gray-700 hover:text-indigo-600 transition-colors duration-200">المسائل</Link>
             <Link to={"algorithms"} className="text-sm text-gray-700 hover:text-indigo-600 transition-colors duration-200">خوارزميات</Link>
             <Link to={"contests"} className="text-sm text-gray-700 hover:text-indigo-600 transition-colors duration-200">مسابقات</Link>
@@ -51,7 +29,7 @@ const Navbar = ({ onLogout, setPage }) => {
 
           {/* المستخدم + زر القائمة + الإشعارات */}
           <div className="flex items-center space-x-reverse space-x-3 relative">
-            {user && <NotificationDropdown notificationsData={notifications} />}
+            {user && <NotificationDropdown />}
 
             {user ? (
               <>
@@ -94,7 +72,7 @@ const Navbar = ({ onLogout, setPage }) => {
       {/* القائمة المنسدلة - موبايل */}
       <div className={`md:hidden bg-gray-50 border-t border-gray-200 overflow-hidden transition-all duration-300 ${menuOpen ? "max-h-96 opacity-100 py-2" : "max-h-0 opacity-0 py-0"}`}>
         <div className="px-5 space-y-1 text-right">
-          <Link to={"profile"} className="block w-full text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md px-3 py-1.5 transition-colors duration-200">الملف الشخصي</Link>
+          <Link to={user ? `/Profile/${user.id}` : "/login"} className="block w-full text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md px-3 py-1.5 transition-colors duration-200">الملف الشخصي</Link>
           <Link to={"problems"} className="block w-full text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md px-3 py-1.5 transition-colors duration-200">المسائل</Link>
           <Link to={"algorithms"} className="block w-full text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md px-3 py-1.5 transition-colors duration-200">خوارزميات</Link>
           <Link to={"contests"} className="block w-full text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md px-3 py-1.5 transition-colors duration-200">مسابقات</Link>

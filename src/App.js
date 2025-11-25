@@ -1,12 +1,12 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-import Navbar from "./Navbar";
 import Login from "./Pages/Auth/Login";
 import Signup from "./Pages/Auth/Signup";
+import LandingPage from "./Pages/Landing/LandingPage";
+import DashboardHome from "./Pages/Dashboard/DashboardHome";
 
-import AlgorithmsList from "./Pages/algorithm/AlgorithmsList";
-import AlgorithmDetail from "./Pages/algorithm/AlgorithmDetail";
+import AlgorithmDetail from "./Pages/Algorithms/AlgorithmDetail";
 
 import { ContestRoutes } from "./Routes/ContestRoute";
 import { ProblemRoutes } from "./Routes/ProblemRoute";
@@ -14,22 +14,15 @@ import { UserRoutes } from "./Routes/UserRoute";
 
 import { ProblemRequestRoutes } from "./Routes/ProblemRequestRoute";
 import { SubmissionRoutes } from "./Routes/SubmissionRoute";
-
-
-
 function App() {
   return (
     <Router>
-      <Navbar />
-
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        {/* <Route path="/problems" element={<Problems />} /> */}
-        <Route path="/algorithms" element={<AlgorithmsList />} />
+        <Route path="/dashboard" element={<DashboardHome />} />
         <Route path="/algorithm/:id" element={<AlgorithmDetail />} />
-
-
 
         {ContestRoutes}
         {ProblemRoutes} 

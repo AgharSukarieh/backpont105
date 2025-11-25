@@ -1,0 +1,533 @@
+.profile-page {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  color: #111827;
+  direction: rtl;
+  font-family: "IBM Plex Sans Arabic", "Cairo", sans-serif;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.profile-submissions-wrapper {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.profile-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  padding: 24px;
+}
+
+@media (max-width: 1024px) {
+  .profile-container {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+}
+
+/* Sidebar Styles */
+.profile-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.profile-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e5e7eb;
+  display: block;
+  margin: 0 auto 16px;
+}
+
+.profile-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.profile-username {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 20px;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.profile-action-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.profile-action-btn--primary {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  color: #ffffff;
+}
+
+.profile-action-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.profile-action-btn--secondary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+.profile-action-btn--secondary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.profile-info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.profile-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.profile-info-icon {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+}
+
+.profile-info-icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.profile-info-value {
+  color: #111827;
+  font-weight: 500;
+}
+
+.profile-stats-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-stat-summary-item {
+  background-color: #f9fafb;
+  padding: 16px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid #e5e7eb;
+  transition: background-color 0.2s ease;
+}
+
+.profile-stat-summary-item:hover {
+  background-color: #f3f4f6;
+}
+
+.profile-stat-summary-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.profile-stat-summary-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-stat-summary-label {
+  font-size: 0.9rem;
+  color: #4b5563;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.profile-stat-summary-label span {
+  display: inline-block;
+  color: #4b5563;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.profile-stat-summary-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  width: 100%;
+  text-align: center;
+}
+
+/* Main Content Styles */
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-sections-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .profile-sections-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-section {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.profile-section--problems {
+  flex: 2;
+}
+
+.profile-section--acceptance {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-section-header {
+  margin-bottom: 28px;
+}
+
+.profile-section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+/* Progress Circles */
+.progress-circles-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.progress-circle-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.progress-circle {
+  width: 120px;
+  height: 120px;
+  transform: rotate(-90deg);
+}
+
+.progress-circle-content {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.progress-circle-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.progress-circle-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.progress-circle-total {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .progress-circles-container {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .progress-circle {
+    width: 100px;
+    height: 100px;
+  }
+
+  .progress-circle-value {
+    font-size: 1.25rem;
+  }
+}
+
+/* Statistics Cards Grid */
+.stats-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .stats-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-card {
+  padding: 28px 24px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-height: 140px;
+  justify-content: center;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card--peach {
+  background: #fef3e2;
+  border: 1px solid #fde8c3;
+}
+
+.stat-card--cyan {
+  background: #e0f7fa;
+  border: 1px solid #b2ebf2;
+}
+
+.stat-card--blue {
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+}
+
+.stat-card--sage {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+}
+
+.stat-card--gold {
+  background: #fff9e6;
+  border: 1px solid #ffecb3;
+}
+
+.stat-card-icon {
+  font-size: 2.25rem;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.stat-card-label {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-top: 7px;
+}
+
+.stat-card-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+}
+
+/* Acceptance Rate Container */
+.acceptance-rate-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Acceptance Rate Chart Styles */
+.stat-card--acceptance {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  width: 100%;
+  height: 100%;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.acceptance-chart {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.acceptance-chart-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.acceptance-chart-track {
+  opacity: 1;
+}
+
+.acceptance-chart-progress {
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.acceptance-chart-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.acceptance-chart-percentage {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.stat-card--acceptance .stat-card-label {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.profile-empty-state {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+@media (max-width: 520px) {
+  .profile-container {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .profile-card,
+  .profile-section {
+    padding: 20px 16px;
+  }
+
+  .profile-name {
+    font-size: 1.25rem;
+  }
+
+  .profile-section-title {
+    font-size: 1.25rem;
+  }
+
+  .progress-circle {
+    width: 90px;
+    height: 90px;
+  }
+
+  .progress-circle-value {
+    font-size: 1.125rem;
+  }
+
+  .stat-card {
+    padding: 20px 16px;
+  }
+
+  .stat-card-value {
+    font-size: 1.5rem;
+  }
+}
