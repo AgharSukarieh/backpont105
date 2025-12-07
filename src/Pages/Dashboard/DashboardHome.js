@@ -1,15 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import DOMPurify from "dompurify";
-import LandingNav from "../../components/LandingNav";
-import dashboardLogo from "../../assets/Component 19 (1).png";
-import defaultAvatar from "../../assets/Ellipse10.png";
-import { clearCredentials, selectAuthUser, selectAuthSession } from "../../store/authSlice";
-import UserProfile from "../User/UserProfile";
-import ProblemsList from "../Problems/ProblemsList";
-import Algorithms from "../Algorithms/Algorithms";
-import { fetchNotificationsByUser, getUnreadNotificationsCount } from "../../Service/NotificationServices";
+import { Typography } from "@mui/material";
 import {
   Bell,
   Award,
@@ -19,8 +12,19 @@ import {
   Brain,
   UserCheck,
 } from "lucide-react";
+import LandingNav from "../../components/LandingNav";
+import dashboardLogo from "../../assets/Component 19 (1).png";
+import defaultAvatar from "../../assets/Ellipse10.png";
+import { clearCredentials, selectAuthUser, selectAuthSession } from "../../store/authSlice";
+import UserProfile from "../User/UserProfile";
+import ProblemsList from "../Problems/ProblemsList";
+import Algorithms from "../Algorithms/Algorithms";
+import Layout from "../Contest/Layout";
+import { fetchNotificationsByUser, getUnreadNotificationsCount } from "../../Service/NotificationServices";
 import "../Auth/login.css";
 import "./dashboardHome.css";
+
+const PostsPage = lazy(() => import("../Posts/User/AllPost"));
 
 const NAV_LINKS = [
   { id: "explore", label: "استكشف", href: "#explore" },
@@ -782,10 +786,16 @@ const DashboardHome = () => {
               <span className="dashboard-home__status-icon dashboard-home__status-icon--success" />
             </div>
 
-            {activeTab === "questions" ? (
+            {activeTab === "explore" ? (
+              <Suspense fallback={<Typography sx={{textAlign: "center", py: 4}}>جاري تحميل المنشورات...</Typography>}>
+                <PostsPage />
+              </Suspense>
+            ) : activeTab === "questions" ? (
               <ProblemsList />
             ) : activeTab === "algorithms" ? (
               <Algorithms />
+            ) : activeTab === "contests" ? (
+              <Layout />
             ) : (
               <section
                 key={activeTab}

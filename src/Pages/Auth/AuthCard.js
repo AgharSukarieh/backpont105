@@ -773,22 +773,17 @@ const AuthCard = ({
       )}
 
       <main className="main-content">
-        <div className="background-circle-behind">
+        {/* <div className="background-circle-behind">
           <img src={ellipse10} alt="Background Circle" />
-        </div>
+        </div> */}
 
         <div className="card-flip-container">
           <div className="login-card card-front">
-            {showIllustrations && renderFrontIllustration()}
-
             <div className="form-section">
               <div className="form-content">
                 <div className="logo-card-section">
                   <img src={logoCard} alt="عرب كوديرز" className="logo-card-img" />
                 </div>
-                <h1>أنت على الطريق الصحيح نحو النجاح</h1>
-                <p className="subtitle">مرحباً بعودتك، يرجى تسجيل الدخول إلى حسابك</p>
-
                 <form className="login-form" onSubmit={handleLoginSubmit}>
                   <div className="form-group">
                     <label htmlFor="email">البريد الإلكتروني</label>
@@ -901,8 +896,9 @@ const AuthCard = ({
           <div className={`login-card card-back ${isSubmitting ? "signup-loading" : ""}`}>
             <div className="form-section">
               <div className="form-content">
-                <h1>حسابك هو أول خطوة نحو المستقبل</h1>
-                <p className="subtitle">يرجى إنشاء حساب جديد للمتابعة</p>
+                <div className="logo-card-section">
+                  <img src={logoCard} alt="عرب كوديرز" className="logo-card-img" />
+                </div>
 
                 <form id="signupForm" className="login-form" onSubmit={handleSignupSubmit}>
                   <div className="form-group">
@@ -1055,135 +1051,6 @@ const AuthCard = ({
                 </div>
               </div>
             </div>
-
-            {showIllustrations && (
-              <div className="illustration-section">
-                <div className="scene">
-                  <div className="clouds-container">
-                    <div className="cloud cloud-0">
-                      <img src={vectorStroke} alt="Cloud 0" />
-                    </div>
-                    <div className="cloud cloud-1">
-                      <img src={vectorStroke1} alt="Cloud 1" />
-                    </div>
-                    <div className="bird bird-1">
-                      <img src={vectorStroke2} alt="Bird" />
-                    </div>
-                    <div className="bird bird-2">
-                      <img src={vectorStroke3} alt="Bird" />
-                    </div>
-                  </div>
-
-                  <div className="tree-container">
-                    <img src={tree} alt="Tree" />
-                  </div>
-
-                  <div className="car-wrapper">
-                    <img src={backCarBody} alt="Back Car Body" className="car-body car-back-body" />
-                    <div className="car-container">
-                      <img
-                        src={carBodyWithoutTyer}
-                        alt="Car Body Without Tyre"
-                        className="car-body car-middle-body"
-                      />
-                    </div>
-                    <img src={forwardCarBody} alt="Forward Car Body" className="car-body car-forward-body" />
-
-                   
-
-                    <div className="detached-wheels">
-                      <div className="detached-wheel wheel-1">
-                        <img src={wheel} alt="Wheel" />
-                        <div className="wheel-trail" />
-                      </div>
-                      <div className="detached-wheel wheel-2">
-                        <img src={wheel} alt="Wheel" />
-                        <div className="wheel-trail" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="ground-infinite-line">
-                      <div className="ground-static">
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                      </div>
-
-                      <div className="ground-animated">
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                        <div className="ground-line-segment long-line">
-                          <img src={vectorStrokeLine} alt="Ground Line" />
-                        </div>
-                        <div className="ground-line-segment short-line">
-                          <img src={vectorStroke6} alt="Ground Extension" />
-                        </div>
-                      </div>
-                    </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </main>

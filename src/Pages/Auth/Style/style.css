@@ -1,6 +1,11 @@
 .login-card-container .login-card {
-    width: 79%;
+    width: 100%;
 }
+
+.login-card-container .card-flip-container {
+    width: 28%;
+}
+
 /* استيراد خط Lemonade */
 @import url('https://fonts.googleapis.com/css2?family=Lemonade:wght@400;700&display=swap');
 
@@ -83,7 +88,7 @@ body {
 
 .main-nav a {
     text-decoration: none;
-    color: #fff;
+    color: #333;
     margin-right: 25px;
     font-weight: 600;
     font-size: 0.95em;
@@ -91,7 +96,7 @@ body {
 }
 
 .main-nav a:hover {
-    color: #ddd;
+    color: #00A99D;
 }
 
 /* ===== Main Content (البطاقة المركزية) ===== */
@@ -113,7 +118,7 @@ body {
     position: absolute;
     width: 100%;
     height: 100%;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     opacity: 0.3;
@@ -128,7 +133,7 @@ body {
     max-width: 100%;
     max-height: 100%;
     width: auto;
-    height: auto;
+    height: 69%;
     object-fit: contain;
     transform: translateX(-50%);
     position: absolute;
@@ -144,17 +149,17 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: absolute;
-    top: 29%;
-    left: 11%;
-    z-index: 15;
+    position: relative;
+    top: 65%;
+    left: -37%;
+    z-index: 5;
     min-height: 600px;
-    margin: 0 auto;
+    margin: 45px auto;
 }
 
 .login-card {
     display: flex;
-    width: 80%;
+    width: 100%;
     background-color: #fff;
     border-radius: 15px;
     overflow: hidden;
@@ -163,7 +168,12 @@ body {
     transition: transform 0.6s ease-in-out;
     transform-style: preserve-3d;
     margin: 0 auto;
-    min-height: 760px;
+    min-height: 380px;
+    max-height: 80vh;
+}
+
+.card-back {
+    min-height: 680px !important;
 }
 
 .card-front {
@@ -175,7 +185,7 @@ body {
 .card-front .form-section {
     flex: 1.3;
     min-width: 0;
-    padding: 56px 60px;
+    /* padding: 56px 30px; */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -183,32 +193,33 @@ body {
 
 .card-front .form-content {
     width: 100%;
-    max-width: 420px;
+    max-width: 85%;
     margin: 0 auto;
 }
 
 .card-front .form-content h1 {
-    font-size: 1.45em;
-    line-height: 1.4;
+    font-size: 1em;
+    line-height: 1.15;
+    margin-bottom: 6px;
 }
 
 .card-front .form-content .subtitle {
-    font-size: 0.95em;
-    margin-bottom: 28px;
+    font-size: 0.75em;
+    margin-bottom: 10px;
 }
 
 .card-front .form-content .form-group {
-    margin-bottom: 18px;
+    margin-bottom: 10px;
 }
 
 .card-front .button-group {
-    margin-top: 20px;
-    gap: 14px;
+    margin-top: 12px;
+    gap: 8px;
 }
 
 @media (max-width: 1280px) {
     .card-front .form-section {
-        padding: 48px 40px;
+        padding: 48px 20px;
     }
 
     .card-front .form-content {
@@ -218,7 +229,7 @@ body {
 
 @media (max-width: 1024px) {
     .card-front .form-section {
-        padding: 40px 32px;
+        padding: 40px 20px;
     }
 
     .card-front .form-content h1 {
@@ -396,14 +407,14 @@ body {
 
 .card-back {
     max-width: min(1000px, calc(100vw - 40px)) !important;
-    width: 80% !important;
+    width: 50% !important;
 }
 
 /* زيادة مساحة الفورم في كارت إنشاء الحساب */
 .card-back .form-section {
     flex: 1.35 !important;
     min-width: 0;
-    padding: 54px 56px !important;
+    padding: 25px 40px !important;
 }
 
 /* تصغير محتوى الفورم في كارت إنشاء الحساب */
@@ -412,28 +423,56 @@ body {
 }
 
 .card-back .form-content h1 {
-    font-size: 1.3em !important;
-    margin: 42px 0 10px !important;
+    font-size: 1.1em !important;
+    margin: 15px 0 5px !important;
     text-align: right;
 }
 
 .card-back .form-content .subtitle {
-    font-size: 0.85em !important;
-    margin: 0 0 18px !important;
+    font-size: 0.7em !important;
+    margin: 0 0 10px !important;
     text-align: right;
 }
 
 .card-back .form-content .form-group {
-    margin-bottom: 12px !important;
+    margin-bottom: 6px !important;
 }
 
 .card-back .form-content .button-group {
-    margin-bottom: 15px !important;
+    margin-top: 8px !important;
+    margin-bottom: 6px !important;
 }
 
 .card-back .form-content .social-section {
-    padding-top: 10px !important;
+    padding-top: 4px !important;
     margin-bottom: 0 !important;
+}
+
+/* تصغير العناصر في كارت إنشاء الحساب */
+.card-back .form-row-inline {
+    margin-bottom: 6px !important;
+    gap: 10px !important;
+}
+
+.card-back .form-content input,
+.card-back .form-content select,
+.card-back .form-content label {
+    font-size: 0.85em !important;
+}
+
+.card-back .form-content input,
+.card-back .form-content select {
+    padding: 7px 10px !important;
+    margin-top: 3px !important;
+}
+
+.card-back .form-content label {
+    margin-bottom: 3px !important;
+}
+
+.card-back .form-content .btn {
+    padding: 8px 18px !important;
+    font-size: 0.85em !important;
 }
 
 .card-back .form-content .logo-card-section {
@@ -948,33 +987,33 @@ ease-in-out;
 
 /* ===== Form Section (النموذج) ===== */
 .form-section {
-    flex: 1;
+    flex: 1 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px;
+    padding: 18px 20px;
     background-color: #fff;
     order: 1;
 }
 
 .form-content {
     width: 100%;
-    max-width: 500px;
+    max-width: 85%;
 }
 
 /* Logo Card Section */
 .logo-card-section {
-    text-align: right;
-    margin-bottom: 20px;
+    text-align: center;
+    margin-bottom: 8px;
 }
 
 .logo-card-img {
-    max-width: 120px;
+    max-width: 146px;
     width: auto;
     height: auto;
     object-fit: contain;
     display: block;
-    margin: 0 0 0 auto;
+    margin: 0 auto;
 }
 
 /* Logo Section */
@@ -1075,6 +1114,7 @@ label {
     font-weight: 600;
     color: #333;
     font-size: 0.95em;
+    text-align: right;
 }
 
 input[type="email"],
@@ -1223,7 +1263,7 @@ input[type="text"]:focus {
 /* Social Section */
 .social-section {
     text-align: center;
-    padding-top: 25px;
+    padding-top: 15px;
     margin-bottom: -10px;
 }
 
@@ -1272,6 +1312,7 @@ input[type="text"]:focus {
     flex-wrap: wrap;
     opacity: 0;
     animation: slideInLeft 0.8s ease forwards 0.5s;
+    margin-bottom: 20px;
 }
 
 @keyframes slideInLeft {

@@ -3,6 +3,7 @@ import React, { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthCard from "./AuthCard";
 import LandingNav from "../../components/LandingNav";
+import Threads from "../../components/Threads";
 import logoPart from "../../assets/logo_part.png";
 import "./login.css";
 
@@ -33,6 +34,14 @@ const Login = () => {
 
   return (
     <div className="login-page">
+      <div style={{ width: '100%', height: '100vh', position: 'fixed', top: 0, left: 0, zIndex: 0 }}>
+        <Threads
+          amplitude={1}
+          distance={0}
+          enableMouseInteraction={true}
+          color={[0.7, 0.7, 0.7]}
+        />
+      </div>
       <header className="landing-header landing-header--auth">
         <LandingNav
           links={navLinks}
