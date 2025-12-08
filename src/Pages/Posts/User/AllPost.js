@@ -4,6 +4,10 @@ import api from "../../../Service/api";
 import { useNavigate, useLocation } from "react-router-dom";
 import DOMPurify from "dompurify";
 import CommentsModal from "./CommentsModal";
+import CreatePostModal from "./CreatePostModal";
+import { useSelector } from "react-redux";
+import { selectAuthSession } from "../../../store/authSlice";
+import Events from "../../Contest/Events";
 
 /*
   نسخة JS من PostsPage مع سلوكين جديدين:
@@ -71,6 +75,21 @@ const PostsPage = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Create Post Modal state
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState(null);
+  const fileInputRef = useRef(null);
+  
+  // Get user from session
+  const session = useSelector(selectAuthSession);
+  const user = session?.responseUserDTO;
+  const userAvatar = 
+    user?.imageUrl ?? 
+    user?.imageURL ?? 
+    user?.avatarUrl ?? 
+    user?.profileImage ?? 
+    null;
 
   // SignalR related refs/state
   const connectionRef = useRef(null);
@@ -970,102 +989,192 @@ const PostsPage = () => {
         }
       `}</style>
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight">المنشورات</h1>
-            <p className="mt-2 text-sm text-slate-500 max-w-xl">
-              هذ الموقع برعاية المهندس أحمد
-            </p>
+      <div className="w-full py-10">
 
-            {/* Active filter chips */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {filterText.trim() && (
-                <span className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full flex items-center gap-2">
-                  <strong className="truncate max-w-xs">{filterText.trim()}</strong>
-                  <button
-                    onClick={() => {
-                      setFilterText("");
-                    }}
-                    aria-label="إزالة فلتر النص"
-                    className="text-indigo-500 px-1"
-                  >
-                    ✕
-                  </button>
-                </span>
-              )}
-              {filterFrom && (
-                <span className="text-xs bg-slate-50 text-slate-700 px-3 py-1 rounded-full flex items-center gap-2">
-                  من: {new Date(filterFrom).toLocaleString()}
-                  <button onClick={() => setFilterFrom("")} className="text-slate-500 px-1" aria-label="إزالة فلتر من">✕</button>
-                </span>
-              )}
-              {filterTo && (
-                <span className="text-xs bg-slate-50 text-slate-700 px-3 py-1 rounded-full flex items-center gap-2">
-                  إلى: {new Date(filterTo).toLocaleString()}
-                  <button onClick={() => setFilterTo("")} className="text-slate-500 px-1" aria-label="إزالة فلتر إلى">✕</button>
-                </span>
-              )}
 
-              {(filterText.trim() || filterFrom || filterTo) && (
-                <button onClick={clearFiltersLocally} className="text-xs text-slate-500 px-2 py-1 bg-white border rounded-full ml-2">
-                  مسح سريع
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <aside className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+            {/* Left sidebar - empty for now or can add other content */}
+          </aside>
+
+          <section className="lg:col-span-6 space-y-6 order-1 lg:order-2 max-w-3xl mx-auto">
+            {/* Search Bar and Filter */}
+            <div className="flex items-center gap-3 mb-4 max-w-3xl mx-auto">
+              {/* Search Bar */}
+              <div className="flex-1 relative">
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                    placeholder="البحث عن المنشور"
+                    className="w-full bg-gray-100 rounded-full px-4 py-2.5 pr-10 text-right text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    dir="rtl"
+                  />
+                  {filterText ? (
+                    <button
+                      onClick={() => setFilterText("")}
+                      className="absolute left-4 w-5 h-5 text-gray-400 hover:text-gray-600 transition cursor-pointer flex items-center justify-center"
+                      aria-label="مسح البحث"
+                    >
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <svg className="absolute left-4 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              
+              {/* Filter Button */}
+              <button 
+                onClick={() => setFilterOpen((s) => !s)} 
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
+                aria-expanded={filterOpen} 
+                aria-controls="posts-filter-panel"
+              >
+                <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 4h18M7 8h10M11 12h2M9 16h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="18" cy="4" r="2" fill="currentColor"/>
+                  <circle cx="6" cy="8" r="2" fill="currentColor"/>
+                  <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                  <circle cx="15" cy="16" r="2" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Filter panel (expanded) */}
+            {filterOpen && (
+              <form id="posts-filter-panel" onSubmit={applyFilter} className="mb-4 max-w-3xl mx-auto bg-white border border-slate-100 rounded-2xl p-4 shadow-sm" onClick={(e) => stop(e)}>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                  <div className="lg:col-span-2">
+                    <label className="text-xs text-slate-500 block mb-1">نص البحث</label>
+                    <input type="text" value={filterText} onChange={(e) => setFilterText(e.target.value)} placeholder="ابحث في العناوين أو المحتوى أو الإسم..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                    <div className="text-xs text-slate-400 mt-1">المعاينة تظهر فورياً. اضغط "تطبيق الفلتر" لجلب النتائج من السيرفر.</div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-slate-500 block mb-1">من (تاريخ/وقت)</label>
+                    <input type="datetime-local" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-slate-500 block mb-1">إلى (تاريخ/وقت)</label>
+                    <input type="datetime-local" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                  </div>
+                </div>
+
+                {filterError && <div className="text-red-500 text-sm mt-2">{filterError}</div>}
+
+                <div className="mt-4 flex gap-2 justify-end items-center">
+                  <div className="text-xs text-slate-500 mr-auto">{serverFilterApplied ? "نتائج من السيرفر" : "معاينة محلية"}</div>
+
+                  <button type="button" onClick={resetFilters} className="px-4 py-2 bg-slate-100 rounded-lg text-sm hover:bg-slate-200 transition" disabled={filterLoading}>إعادة ضبط</button>
+                  <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:brightness-105 transition" disabled={filterLoading || !!filterError}>{filterLoading ? "جارٍ التطبيق..." : "تطبيق الفلتر"}</button>
+                </div>
+              </form>
+            )}
+
+            {/* Create Post Input (Facebook-style) - Above posts */}
+            <div 
+              onClick={() => setShowCreatePostModal(true)}
+              className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden p-5 md:p-6 -mt-4"
+              dir="rtl"
+            >
+              {/* Top section with profile picture and input */}
+              <div className="flex items-center gap-3">
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // نفس سلوك dashboard-home__profile-header - الانتقال إلى Dashboard مع فتح التاب profile
+                    navigate("/dashboard", { 
+                      state: { openProfile: true } 
+                    });
+                    setTimeout(() => {
+                      if (typeof window !== "undefined") {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }, 0);
+                  }}
+                  className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition"
+                >
+                  {userAvatar ? (
+                    <img 
+                      src={userAvatar} 
+                      alt={user?.userName || "User"} 
+                      className="w-full h-full object-cover rounded-full" 
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <span className="text-gray-600 font-semibold text-sm">
+                      {user?.userName ? user.userName.split(" ").map(n => n[0]).slice(0, 2).join("") : "U"}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 text-right text-gray-500 text-base bg-gray-50 rounded-full px-4 py-3 hover:bg-gray-100 transition">
+                  {user?.userName || "مستخدم"}, ما الذي يدور في ذهنك؟
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-200 my-3"></div>
+
+              {/* Bottom section with action buttons */}
+              <div className="flex items-center justify-around">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowCreatePostModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex-1 justify-center"
+                >
+                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700">بث مباشر</span>
                 </button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button onClick={() => setFilterOpen((s) => !s)} className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-slate-100 shadow-sm hover:shadow-md transition" aria-expanded={filterOpen} aria-controls="posts-filter-panel">
-              <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none">
-                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M10.5 18.5a8 8 0 100-16 8 8 0 000 16z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="text-sm font-medium text-slate-700">فلتر</span>
-            </button>
-
-            <button onClick={() => navigate("/react-app/AddPost")} className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-sky-500 text-white shadow-lg hover:brightness-105 transition" aria-label="اضافة بوست">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/20">+</span>
-              <span className="text-sm font-semibold">اضافة بوست</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Filter panel (expanded) */}
-        {filterOpen && (
-          <form id="posts-filter-panel" onSubmit={applyFilter} className="mb-8 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm" onClick={(e) => stop(e)}>
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-              <div className="lg:col-span-2">
-                <label className="text-xs text-slate-500 block mb-1">نص البحث</label>
-                <input type="text" value={filterText} onChange={(e) => setFilterText(e.target.value)} placeholder="ابحث في العناوين أو المحتوى أو الإسم..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
-                <div className="text-xs text-slate-400 mt-1">المعاينة تظهر فورياً. اضغط "تطبيق الفلتر" لجلب النتائج من السيرفر.</div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  multiple
+                  accept="image/*,video/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files);
+                    if (files.length > 0) {
+                      setPendingFiles(files);
+                      setShowCreatePostModal(true);
+                    }
+                    // Reset input
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    fileInputRef.current?.click();
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex-1 justify-center"
+                >
+                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700">صور/فيديو</span>
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowCreatePostModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex-1 justify-center"
+                >
+                  <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.536a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700">مشاعر/أنشطة</span>
+                </button>
               </div>
-
-              <div>
-                <label className="text-xs text-slate-500 block mb-1">من (تاريخ/وقت)</label>
-                <input type="datetime-local" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-500 block mb-1">إلى (تاريخ/وقت)</label>
-                <input type="datetime-local" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
-              </div>
             </div>
 
-            {filterError && <div className="text-red-500 text-sm mt-2">{filterError}</div>}
-
-            <div className="mt-4 flex gap-2 justify-end items-center">
-              <div className="text-xs text-slate-500 mr-auto">{serverFilterApplied ? "نتائج من السيرفر" : "معاينة محلية"}</div>
-
-              <button type="button" onClick={resetFilters} className="px-4 py-2 bg-slate-100 rounded-lg text-sm hover:bg-slate-200 transition" disabled={filterLoading}>إعادة ضبط</button>
-              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:brightness-105 transition" disabled={filterLoading || !!filterError}>{filterLoading ? "جارٍ التطبيق..." : "تطبيق الفلتر"}</button>
-            </div>
-          </form>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <section className="lg:col-span-2 space-y-6">
             {displayedPosts?.length === 0 && <p className="text-slate-600">No posts found.</p>}
 
             {displayedPosts?.map((post) => {
@@ -1155,42 +1264,56 @@ const PostsPage = () => {
             })}
           </section>
 
-          <aside className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold">{getInitials("You") || "Y"}</div>
-                <div>
-                  <div className="text-sm font-semibold text-slate-900">أنت</div>
-                  <div className="text-xs text-slate-400">شارك فكرة جديدة الآن</div>
+          {/* Right Sidebar - Popular Tags */}
+          <aside className="lg:col-span-3 space-y-6 order-3 lg:ml-6">
+            <div className="hidden md:block sticky top-4 space-y-6">
+              {/* Events Component */}
+              <div className="rounded-2xl border border-gray-200 shadow-sm p-5">
+                <Events />
+              </div>
+              
+              {/* Popular Tags */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  <h5 className="text-base font-bold text-slate-900">شائع الآن</h5>
                 </div>
-              </div>
-
-              <div className="mt-4">
-                <button onClick={() => navigate("/react-app/AddPost")} className="w-full px-4 py-2 bg-gradient-to-r from-indigo-600 to-sky-500 text-white rounded-lg shadow hover:brightness-105 transition">اكتب منشوراً</button>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-              <h4 className="text-sm font-semibold text-slate-900">نصائح للتفاعل</h4>
-              <ul className="mt-3 text-xs text-slate-500 space-y-2">
-                <li>استخدم صور عالية الجودة</li>
-                <li>عنوان واضح يجذب القارئ</li>
-                <li>أضف وسائط لزيادة التفاعل</li>
-              </ul>
-            </div>
-
-            <div className="hidden md:block bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-              <h5 className="text-sm font-semibold text-slate-900">شائع الآن</h5>
-              <div className="mt-3 space-y-2 text-xs text-slate-500">
-                {popularLoading && <div className="text-slate-600">جاري التحميل...</div>}
-                {popularError && <div className="text-red-500">{popularError}</div>}
-                {!popularLoading && !popularError && popularTags.length === 0 && <div className="text-slate-500">لا توجد بيانات شائعة حالياً.</div>}
-                {!popularLoading && popularTags.map((t) => (
-                  <div key={t.tagId ?? t.tagId} role="button" tabIndex={0} onClick={() => navigate(`/react-app/Algorithms/${t.tagId}`)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/react-app/Algorithms/${t.tagId}`); } }} className="flex items-center justify-between hover:bg-slate-50 p-2 rounded-md cursor-pointer transition">
-                    <span className="text-slate-700">#{t.tagName}</span>
-                    <span className="text-slate-400 text-xs">{t.numberOfUsed ?? "-"}</span>
-                  </div>
-                ))}
+                <div className="space-y-2">
+                  {popularLoading && (
+                    <div className="text-center py-4">
+                      <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-indigo-600 border-t-transparent"></div>
+                      <p className="text-xs text-slate-500 mt-2">جاري التحميل...</p>
+                    </div>
+                  )}
+                  {popularError && (
+                    <div className="text-red-500 text-sm p-3 bg-red-50 rounded-lg">{popularError}</div>
+                  )}
+                  {!popularLoading && !popularError && popularTags.length === 0 && (
+                    <div className="text-slate-400 text-sm text-center py-4">لا توجد بيانات شائعة حالياً.</div>
+                  )}
+                  {!popularLoading && popularTags.map((t) => (
+                    <div
+                      key={t.tagId ?? t.tagId}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/react-app/Algorithms/${t.tagId}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          navigate(`/react-app/Algorithms/${t.tagId}`);
+                        }
+                      }}
+                      className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 cursor-pointer transition-all duration-200 border border-transparent hover:border-indigo-200 hover:shadow-sm group"
+                    >
+                      <span className="text-sm font-semibold text-indigo-700 group-hover:text-indigo-800 transition">#{t.tagName}</span>
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-white text-indigo-600 border border-indigo-200 group-hover:bg-indigo-50 transition">
+                        {t.numberOfUsed ?? "0"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </aside>
@@ -1276,6 +1399,21 @@ const PostsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Create Post Modal */}
+      <CreatePostModal
+        isOpen={showCreatePostModal}
+        onClose={() => {
+          setShowCreatePostModal(false);
+          setPendingFiles(null);
+        }}
+        onPostCreated={() => {
+          // Refresh posts after creation
+          getPosts();
+          setPendingFiles(null);
+        }}
+        initialFiles={pendingFiles}
+      />
     </div>
   );
 };

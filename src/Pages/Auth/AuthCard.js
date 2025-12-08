@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../../Hook/UserContext";
-import { loginUser } from "../../Service/userService";
+import { loginUser, verifyOtp, sendOtp, sendOtpForRestorePassword, restorePassword } from "../../Service/userService";
 import "./Style/style.css";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../../store/authSlice";
@@ -227,6 +227,23 @@ const AuthCard = ({
   const [countries, setCountries] = useState([]);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [showIllustrations, setShowIllustrations] = useState(true);
+  
+  // OTP states
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [pendingSignupData, setPendingSignupData] = useState(null);
+
+  // Forgot Password states
+  const [showForgotPasswordEmailModal, setShowForgotPasswordEmailModal] = useState(false);
+  const [showForgotPasswordOtpModal, setShowForgotPasswordOtpModal] = useState(false);
+  const [showForgotPasswordNewPasswordModal, setShowForgotPasswordNewPasswordModal] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordOtp, setForgotPasswordOtp] = useState("");
+  const [forgotPasswordNewPassword, setForgotPasswordNewPassword] = useState("");
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+
   useEffect(() => {
     const updateIllustrationsVisibility = () => {
       setShowIllustrations(window.innerWidth > 768);
@@ -243,6 +260,214 @@ const AuthCard = ({
     ensureBoxicons();
     return () => removeBoxicons();
   }, []);
+
+  // Timer لإعادة إرسال OTP
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // التحقق من OTP وإكمال التسجيل
+  const handleVerifyOtp = async () => {
+    if (!otp.trim()) {
+      showAlert("الرجاء إدخال رمز التحقق", "error");
+      return;
+    }
+
+    if (!pendingSignupData) {
+      showAlert("خطأ في البيانات المؤقتة", "error");
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const otpValue = otp.trim();
+      
+      console.log("Creating account with OTP:", {
+        email: pendingSignupData.trimmedEmail,
+        otp: otpValue
+      });
+
+      // إرسال بيانات التسجيل مع OTP (حسب API documentation)
+      const queryParams = new URLSearchParams({
+        Email: pendingSignupData.trimmedEmail,
+        Password: pendingSignupData.trimmedPassword,
+        UserName: pendingSignupData.trimmedUsername,
+        CountryId: pendingSignupData.signupCountry,
+        otp: otpValue, // lowercase كما في API documentation
+      });
+
+      const formData = new FormData();
+      if (pendingSignupData.signupImage) {
+        formData.append("image", pendingSignupData.signupImage);
+      }
+
+      const response = await fetch(`${REGISTER_URL}?${queryParams.toString()}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      let data = null;
+      let rawResponse = "";
+      try {
+        rawResponse = await response.text();
+        data = rawResponse ? JSON.parse(rawResponse) : null;
+      } catch (error) {
+        data = null;
+      }
+
+      if (!response.ok) {
+        const errorsMessage = Array.isArray(data?.errors)
+          ? data.errors.join(" ")
+          : "";
+        const message =
+          data?.message ||
+          errorsMessage ||
+          rawResponse ||
+          "حدث خطأ أثناء إنشاء الحساب. يرجى التحقق من البيانات ورمز OTP.";
+        throw new Error(message);
+      }
+
+      if (!data?.isAuthenticated || !data?.token) {
+        throw new Error(data?.message || "فشل إنشاء الحساب، يرجى التحقق من رمز OTP.");
+      }
+
+      const payload = decodeJwt(data.token);
+      const resolvedUserId =
+        data.responseUserDTO?.id ??
+        payload?.uid ??
+        payload?.sub ??
+        Date.now();
+      const resolvedName =
+        data.responseUserDTO?.fullName ??
+        data.username ??
+        pendingSignupData.trimmedUsername;
+      const resolvedEmail = data.email ?? pendingSignupData.trimmedEmail;
+
+      setUser({
+        id: resolvedUserId,
+        name: resolvedName,
+        email: resolvedEmail,
+        role: data.role ?? "User",
+      });
+
+      localStorage.setItem("token", data.token);
+      if (pendingSignupData.signupRemember) {
+        persistRememberedCredentials({ email: resolvedEmail, remember: true });
+      } else {
+        clearRememberedCredentials();
+      }
+
+      setShowOtpModal(false);
+      setOtp("");
+      setPendingSignupData(null);
+      showAlert("تم إنشاء الحساب بنجاح!", "success");
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      showAlert(error.message || "خطأ أثناء التحقق من OTP", "error");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Forgot Password handlers
+  const handleForgotPasswordClick = () => {
+    setShowForgotPasswordEmailModal(true);
+    setForgotPasswordEmail(loginEmail || ""); // إذا كان المستخدم قد أدخل البريد في كارت تسجيل الدخول
+    setForgotPasswordOtp("");
+    setForgotPasswordNewPassword("");
+  };
+
+  const handleSendForgotPasswordOtp = async () => {
+    if (!forgotPasswordEmail.trim()) {
+      showAlert("يرجى إدخال البريد الإلكتروني", "error");
+      return;
+    }
+
+    if (!isValidEmail(forgotPasswordEmail.trim())) {
+      showAlert("يرجى إدخال بريد إلكتروني صحيح", "error");
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    try {
+      await sendOtpForRestorePassword(forgotPasswordEmail.trim());
+      setShowForgotPasswordEmailModal(false);
+      setShowForgotPasswordOtpModal(true);
+      showAlert("تم إرسال رمز التحقق إلى بريدك الإلكتروني", "success");
+    } catch (error) {
+      console.error("Error sending OTP for restore password:", error);
+      showAlert(error.message || "حدث خطأ أثناء إرسال رمز التحقق", "error");
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleVerifyForgotPasswordOtp = async () => {
+    if (!forgotPasswordOtp.trim() || forgotPasswordOtp.length !== 6) {
+      showAlert("يرجى إدخال رمز التحقق (6 أرقام)", "error");
+      return;
+    }
+
+    // التحقق من OTP يتم عند تغيير كلمة المرور، لكن ننتقل للخطوة التالية
+    setShowForgotPasswordOtpModal(false);
+    setShowForgotPasswordNewPasswordModal(true);
+  };
+
+  const handleRestorePassword = async () => {
+    if (!forgotPasswordOtp.trim()) {
+      showAlert("يرجى إدخال رمز التحقق", "error");
+      return;
+    }
+
+    if (!forgotPasswordNewPassword.trim()) {
+      showAlert("يرجى إدخال كلمة السر الجديدة", "error");
+      return;
+    }
+
+    if (forgotPasswordNewPassword.trim().length < 6) {
+      showAlert("كلمة السر يجب أن تكون 6 أحرف على الأقل", "error");
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    try {
+      await restorePassword(forgotPasswordEmail.trim(), forgotPasswordOtp.trim(), forgotPasswordNewPassword.trim());
+      showAlert("تم تغيير كلمة المرور بنجاح!", "success");
+      setShowForgotPasswordNewPasswordModal(false);
+      setForgotPasswordEmail("");
+      setForgotPasswordOtp("");
+      setForgotPasswordNewPassword("");
+    } catch (error) {
+      console.error("Error restoring password:", error);
+      showAlert(error.message || "حدث خطأ أثناء تغيير كلمة المرور", "error");
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  // إعادة إرسال OTP
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || !pendingSignupData) return;
+
+    setOtpLoading(true);
+    try {
+      console.log("Resending OTP for:", pendingSignupData.trimmedEmail);
+      await sendOtp(pendingSignupData.trimmedEmail);
+      showAlert("تم إرسال رمز التحقق مرة أخرى", "success");
+      setResendCooldown(60);
+    } catch (error) {
+      console.error("Error resending OTP:", error);
+      showAlert(error.message || "خطأ في إعادة الإرسال", "error");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   useEffect(() => {
     setIsFlipped(initialMode === "signup");
@@ -492,83 +717,30 @@ const AuthCard = ({
       return;
     }
 
-    const queryParams = new URLSearchParams({
-      Email: trimmedEmail,
-      Password: trimmedPassword,
-      UserName: trimmedUsername,
-      CountryId: signupCountry,
-      MyProperty: "1",
-    });
-
-    const formData = new FormData();
-    if (signupImage) {
-      formData.append("image", signupImage);
-    }
-
     try {
       setIsSubmitting(true);
-      const response = await fetch(`${REGISTER_URL}?${queryParams.toString()}`, {
-        method: "POST",
-        body: formData,
+      
+      // حفظ بيانات التسجيل المؤقتة
+      setPendingSignupData({
+        trimmedUsername,
+        trimmedEmail,
+        trimmedPassword,
+        signupCountry,
+        signupImage,
+        signupRemember
       });
 
-      let data = null;
-      let rawResponse = "";
-      try {
-        rawResponse = await response.text();
-        data = rawResponse ? JSON.parse(rawResponse) : null;
-      } catch (error) {
-        data = null;
-      }
+      // إرسال طلب لإرسال OTP باستخدام endpoint الصحيح
+      console.log("Sending OTP request for:", trimmedEmail);
+      await sendOtp(trimmedEmail);
 
-      if (!response.ok) {
-        const errorsMessage = Array.isArray(data?.errors)
-          ? data.errors.join(" ")
-          : "";
-        const message =
-          data?.message ||
-          errorsMessage ||
-          rawResponse ||
-          "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقاً.";
-        throw new Error(message);
-      }
-
-      if (!data?.isAuthenticated || !data?.token) {
-        throw new Error(data?.message || "فشل إنشاء الحساب، يرجى التحقق من البيانات.");
-      }
-
-      console.log("register response", data);
-
-      const payload = decodeJwt(data.token);
-      const resolvedUserId =
-        data.responseUserDTO?.id ??
-        payload?.uid ??
-        payload?.sub ??
-        Date.now();
-      const resolvedName =
-        data.responseUserDTO?.fullName ??
-        data.username ??
-        trimmedUsername;
-      const resolvedEmail = data.email ?? trimmedEmail;
-
-      setUser({
-        id: resolvedUserId,
-        name: resolvedName,
-        email: resolvedEmail,
-        role: data.role ?? "User",
-      });
-
-      localStorage.setItem("token", data.token);
-      if (signupRemember) {
-        persistRememberedCredentials({ email: resolvedEmail, remember: true });
-      } else {
-        clearRememberedCredentials();
-      }
-
-      showAlert("تم إنشاء الحساب بنجاح والتحقق من التوكن.", "success");
-      navigate("/dashboard", { replace: true });
+      // عرض modal OTP
+      setShowOtpModal(true);
+      setResendCooldown(60);
+      showAlert("تم إرسال رمز التحقق إلى بريدك الإلكتروني", "success");
     } catch (error) {
-      showAlert(error.message || "حدث خطأ أثناء إنشاء الحساب.", "error");
+      console.error("Error sending OTP:", error);
+      showAlert(error.message || "حدث خطأ أثناء إرسال رمز التحقق.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -776,8 +948,7 @@ const AuthCard = ({
         {/* <div className="background-circle-behind">
           <img src={ellipse10} alt="Background Circle" />
         </div> */}
-
-        <div className="card-flip-container">
+       <div className="card-flip-container">
           <div className="login-card card-front">
             <div className="form-section">
               <div className="form-content">
@@ -837,7 +1008,7 @@ const AuthCard = ({
                       />
                       <label htmlFor="remember">تذكرني</label>
                     </div>
-                    <a href="#forgot" className="forgot-password">
+                    <a href="#forgot" className="forgot-password" onClick={(e) => { e.preventDefault(); handleForgotPasswordClick(); }}>
                       هل نسيت كلمة المرور؟
                     </a>
                   </div>
@@ -967,9 +1138,6 @@ const AuthCard = ({
                       />
                       <label htmlFor="signup-remember">تذكرني</label>
                     </div>
-                    <a href="#forgot" className="forgot-password">
-                      هل نسيت كلمة المرور؟
-                    </a>
                   </div>
 
                   <div className="form-row-inline">
@@ -1052,7 +1220,7 @@ const AuthCard = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>  
       </main>
 
       {showFooter && (
@@ -1078,6 +1246,230 @@ const AuthCard = ({
             </div>
           </div>
         </footer>
+      )}
+
+      {/* OTP Modal */}
+      {showOtpModal && (
+        <div className="otp-modal-overlay" onClick={() => {}}>
+          <div className="otp-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="otp-modal-header">
+              <h3>التحقق من البريد الإلكتروني</h3>
+              <button
+                className="otp-modal-close"
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setOtp("");
+                  setPendingSignupData(null);
+                }}
+              >
+                <i className="bx bx-x"></i>
+              </button>
+            </div>
+            <div className="otp-modal-body">
+              <p className="otp-modal-message">
+                تم إرسال رمز التحقق إلى بريدك الإلكتروني:
+                <br />
+                <strong>{pendingSignupData?.trimmedEmail}</strong>
+              </p>
+              <div className="otp-input-group">
+                <label htmlFor="otp-input">رمز التحقق (OTP)</label>
+                <input
+                  id="otp-input"
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                  maxLength="6"
+                  disabled={otpLoading}
+                  className="otp-input"
+                  autoFocus
+                />
+              </div>
+              <div className="otp-modal-actions">
+                <button
+                  onClick={handleVerifyOtp}
+                  disabled={otpLoading || !otp.trim()}
+                  className="btn btn-primary otp-verify-btn"
+                >
+                  {otpLoading ? "جارٍ التحقق..." : "تحقق وإنشاء الحساب"}
+                </button>
+                <button
+                  onClick={handleResendOtp}
+                  disabled={otpLoading || resendCooldown > 0}
+                  className="btn btn-secondary otp-resend-btn"
+                >
+                  {resendCooldown > 0
+                    ? `إعادة الإرسال بعد ${resendCooldown} ثانية`
+                    : "إعادة إرسال رمز التحقق"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forgot Password - Email Modal */}
+      {showForgotPasswordEmailModal && (
+        <div className="otp-modal-overlay" onClick={() => setShowForgotPasswordEmailModal(false)}>
+          <div className="otp-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="otp-modal-header">
+              <h3>استعادة كلمة المرور</h3>
+              <button
+                className="otp-modal-close"
+                onClick={() => {
+                  setShowForgotPasswordEmailModal(false);
+                  setForgotPasswordEmail("");
+                }}
+              >
+                <i className="bx bx-x"></i>
+              </button>
+            </div>
+            <div className="otp-modal-body">
+              <p className="otp-modal-message">
+                أدخل بريدك الإلكتروني لإرسال رمز التحقق
+              </p>
+              <div className="otp-input-group">
+                <label htmlFor="forgot-email-input">البريد الإلكتروني</label>
+                <input
+                  id="forgot-email-input"
+                  type="email"
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  disabled={forgotPasswordLoading}
+                  className="otp-input"
+                  autoFocus
+                />
+              </div>
+              <div className="otp-modal-actions">
+                <button
+                  onClick={handleSendForgotPasswordOtp}
+                  disabled={forgotPasswordLoading || !forgotPasswordEmail.trim()}
+                  className="btn btn-primary otp-verify-btn"
+                >
+                  {forgotPasswordLoading ? "جاري الإرسال..." : "إرسال"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forgot Password - OTP Modal */}
+      {showForgotPasswordOtpModal && (
+        <div className="otp-modal-overlay" onClick={() => setShowForgotPasswordOtpModal(false)}>
+          <div className="otp-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="otp-modal-header">
+              <h3>إدخال رمز التحقق</h3>
+              <button
+                className="otp-modal-close"
+                onClick={() => {
+                  setShowForgotPasswordOtpModal(false);
+                  setForgotPasswordOtp("");
+                }}
+              >
+                <i className="bx bx-x"></i>
+              </button>
+            </div>
+            <div className="otp-modal-body">
+              <p className="otp-modal-message">
+                تم إرسال رمز التحقق إلى بريدك الإلكتروني:
+                <br />
+                <strong>{forgotPasswordEmail}</strong>
+              </p>
+              <div className="otp-input-group">
+                <label htmlFor="forgot-otp-input">رمز التحقق (OTP)</label>
+                <input
+                  id="forgot-otp-input"
+                  type="text"
+                  value={forgotPasswordOtp}
+                  onChange={(e) => setForgotPasswordOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                  maxLength="6"
+                  disabled={forgotPasswordLoading}
+                  className="otp-input"
+                  autoFocus
+                />
+              </div>
+              <div className="otp-modal-actions">
+                <button
+                  onClick={handleVerifyForgotPasswordOtp}
+                  disabled={forgotPasswordLoading || !forgotPasswordOtp.trim() || forgotPasswordOtp.length !== 6}
+                  className="btn btn-primary otp-verify-btn"
+                >
+                  {forgotPasswordLoading ? "جاري التحقق..." : "تحقق"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowForgotPasswordOtpModal(false);
+                    setShowForgotPasswordEmailModal(true);
+                  }}
+                  disabled={forgotPasswordLoading}
+                  className="btn btn-secondary otp-resend-btn"
+                >
+                  العودة
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forgot Password - New Password Modal */}
+      {showForgotPasswordNewPasswordModal && (
+        <div className="otp-modal-overlay" onClick={() => setShowForgotPasswordNewPasswordModal(false)}>
+          <div className="otp-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="otp-modal-header">
+              <h3>كلمة المرور الجديدة</h3>
+              <button
+                className="otp-modal-close"
+                onClick={() => {
+                  setShowForgotPasswordNewPasswordModal(false);
+                  setForgotPasswordNewPassword("");
+                }}
+              >
+                <i className="bx bx-x"></i>
+              </button>
+            </div>
+            <div className="otp-modal-body">
+              <p className="otp-modal-message">
+                أدخل كلمة المرور الجديدة
+              </p>
+              <div className="otp-input-group">
+                <label htmlFor="forgot-new-password-input">كلمة السر الجديدة</label>
+                <input
+                  id="forgot-new-password-input"
+                  type="password"
+                  value={forgotPasswordNewPassword}
+                  onChange={(e) => setForgotPasswordNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  disabled={forgotPasswordLoading}
+                  className="otp-input"
+                  autoFocus
+                />
+              </div>
+              <div className="otp-modal-actions">
+                <button
+                  onClick={handleRestorePassword}
+                  disabled={forgotPasswordLoading || !forgotPasswordNewPassword.trim() || forgotPasswordNewPassword.trim().length < 6}
+                  className="btn btn-primary otp-verify-btn"
+                >
+                  {forgotPasswordLoading ? "جاري التغيير..." : "تغيير كلمة المرور"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowForgotPasswordNewPasswordModal(false);
+                    setShowForgotPasswordOtpModal(true);
+                  }}
+                  disabled={forgotPasswordLoading}
+                  className="btn btn-secondary otp-resend-btn"
+                >
+                  العودة
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

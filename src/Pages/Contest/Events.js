@@ -99,7 +99,7 @@ export default function Events() {
       bgcolor: "transparent",
       boxShadow: "none",
       width: "100%",
-      maxWidth: "350px"
+      maxWidth: "100%"
     }}>
       <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold", textAlign: "right" }}>
         الأحداث
