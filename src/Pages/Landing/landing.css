@@ -146,14 +146,15 @@ body.landing-scroll .landing-section {
 }
 
 .landing-hero__actions button:first-child {
-  background: linear-gradient(135deg, #2fbf9d 0%, #00a19a 100%);
+  background: #007C89;
   color: #fff;
-  box-shadow: 0 15px 35px rgba(0, 161, 154, 0.25);
+  box-shadow: 0 15px 35px rgba(0, 124, 137, 0.25);
 }
 
 .landing-hero__actions button:first-child:hover {
   transform: translateY(-3px);
-  box-shadow: 0 18px 40px rgba(0, 161, 154, 0.35);
+  background: #006a75;
+  box-shadow: 0 18px 40px rgba(0, 124, 137, 0.35);
 }
 
 .landing-hero__secondary {

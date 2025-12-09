@@ -20,11 +20,17 @@ export default function AvailableCompetitions({ available}) {
 
   useEffect(() => {
     if (available && available.length > 0) {
-      setVisibleItems(
-        available.length >= 3
-          ? [0, 1, 2]
-          : available.map((_, i) => i)
-      );
+      console.log("📋 Available competitions for display:", available.length, available);
+      // عرض جميع المسابقات المتاحة
+      // إذا كان هناك 3 أو أكثر، عرض أول 3 في نفس الوقت
+      // إذا كان أقل من 3، عرض جميع المسابقات
+      const itemsToShow = available.length >= 3
+          ? [0, 1, 2] // عرض أول 3 فقط في نفس الوقت
+          : available.map((_, i) => i); // إذا كانت أقل من 3، عرض الكل
+      console.log("📋 Items to show:", itemsToShow, "from", available.length, "total available");
+      setVisibleItems(itemsToShow);
+    } else {
+      setVisibleItems([]);
     }
   }, [available]);
 
@@ -58,7 +64,7 @@ export default function AvailableCompetitions({ available}) {
   }
 
   return (
-    <Container maxWidth={false} sx={{ position: "relative", width: "100%", px: 2, mb: 4 }}>
+    <Container maxWidth={false} sx={{ position: "relative", width: "100%", px: 0, mb: 4, maxWidth: "100% !important" }}>
       <Box sx={{ 
         display: "flex", 
         alignItems: "center", 

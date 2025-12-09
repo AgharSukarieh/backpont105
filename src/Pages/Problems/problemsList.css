@@ -19,7 +19,7 @@
 
 .problems-spinner {
   border: 6px solid rgba(0, 0, 0, 0.1);
-  border-top: 6px solid #667eea;
+  border-top: 6px solid #007C89;
   border-radius: 50%;
   width: 60px;
   height: 60px;
@@ -85,9 +85,9 @@
 
 .problems-search-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #007C89;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 4px rgba(0, 124, 137, 0.1);
 }
 
 .problems-search-btn {
@@ -96,7 +96,7 @@
   top: 50%;
   transform: translateY(-50%);
   padding: 6px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #007C89 0%, #007C89 100%);
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -109,7 +109,8 @@
 
 .problems-search-btn:hover {
   transform: translateY(-50%) scale(1.05);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 124, 137, 0.3);
+  background: linear-gradient(135deg, #005a64 0%, #005a64 100%);
 }
 
 /* Select Dropdowns */
@@ -133,9 +134,9 @@
 
 .problems-select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #007C89;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 4px rgba(0, 124, 137, 0.1);
 }
 
 .problems-select:disabled {
@@ -192,17 +193,17 @@
 }
 
 .problems-quick-tag:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #007C89 0%, #007C89 100%);
   color: #ffffff;
-  border-color: #667eea;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  border-color: #007C89;
+  box-shadow: 0 2px 8px rgba(0, 124, 137, 0.2);
 }
 
 .problems-quick-tag.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #007C89 0%, #007C89 100%);
   color: #ffffff;
-  border-color: #667eea;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  border-color: #007C89;
+  box-shadow: 0 2px 8px rgba(0, 124, 137, 0.3);
 }
 
 
@@ -223,7 +224,7 @@
 }
 
 .problems-table thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #007C89 0%, #007C89 100%);
   color: #ffffff;
 }
 
@@ -259,8 +260,8 @@
 }
 
 .problems-row:hover {
-  background: #e0e7ff !important;
-  box-shadow: inset 0 0 0 1px #667eea;
+  background: rgba(0, 124, 137, 0.1) !important;
+  box-shadow: inset 0 0 0 1px #007C89;
 }
 
 .problems-table td {
@@ -276,7 +277,7 @@
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: #007C89;
 }
 
 /* Status Badge */
@@ -345,7 +346,7 @@
 }
 
 .problems-solved-count i {
-  color: #667eea;
+  color: #007C89;
   font-size: 1.1rem;
 }
 
@@ -414,14 +415,14 @@
 }
 
 .problems-pagination-btn--active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #007C89 0%, #007C89 100%);
   color: #ffffff;
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border-color: #007C89;
+  box-shadow: 0 4px 12px rgba(0, 124, 137, 0.3);
 }
 
 .problems-pagination-btn--active:hover {
-  background: linear-gradient(135deg, #5a67d8 0%, #673ab7 100%);
+  background: linear-gradient(135deg, #005a64 0%, #005a64 100%);
 }
 
 .problems-pagination-btn i {

@@ -14,9 +14,9 @@ export const ProblemRequestRoutes = (
     <Route
       path="/addProblemProposal"
       element={
-        <AdminRoute>
+        <PrivateRoute>
           <AddProblemProposal />
-        </AdminRoute>
+        </PrivateRoute>
       }
     />
   

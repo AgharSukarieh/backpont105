@@ -22,8 +22,8 @@ const LandingNav = ({
     if (typeof window !== "undefined" && window.location.hash) {
       return window.location.hash;
     }
-    const first = links[0];
-    return first?.href ?? first?.to ?? "";
+    // لا نعين activeTarget تلقائياً إذا لم يكن هناك hash في URL
+    return "";
   });
 
   const memoizedLinks = useMemo(() => links, [links]);
@@ -39,8 +39,10 @@ const LandingNav = ({
       });
       if (matched) {
         setActiveTarget(matched.to ?? matched.href);
+      } else {
+        // إذا لم يكن هناك تطابق، لا نعين activeTarget
+        setActiveTarget("");
       }
-
     }
   }, [location.hash, location.pathname, memoizedLinks]);
 
@@ -79,9 +81,13 @@ const LandingNav = ({
           const isAnchor = target.startsWith("#");
           const isExternal = target.startsWith("http");
           // إذا كان activeTab موجوداً، استخدمه لتحديد النشاط
-          const isActive = activeTab 
-            ? (isAnchor && `#${activeTab}` === target)
-            : activeTarget === target;
+          let isActive = false;
+          if (activeTab !== null && activeTab !== undefined) {
+            isActive = isAnchor && `#${activeTab}` === target;
+          } else if (activeTarget) {
+            // فقط إذا كان activeTarget يطابق target بالضبط
+            isActive = activeTarget === target;
+          }
           const content = (
             <span className={`landing-nav__link ${isActive ? "active" : ""}`}>
               {link.label}

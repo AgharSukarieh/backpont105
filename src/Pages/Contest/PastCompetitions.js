@@ -97,7 +97,8 @@ export default function PastCompetitions({past}) {
     <Card sx={{ p: 2, 
     borderRadius: 4, 
     direction: "rtl",
-    width: "100%", 
+    width: "100%",
+    maxWidth: "100%",
     minHeight: 400,
     bgcolor: "#ffffff",
     boxShadow: "0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)",
@@ -154,7 +155,7 @@ export default function PastCompetitions({past}) {
         /* جميع المسابقات */
         <Grid container spacing={3}>
           {past.map((c) => (
-            <Grid item xs={12} sm={6} md={4} key={c.id}>
+            <Grid item xs={12} sm={6} md={4} lg={3} xl={2.4} key={c.id}>
               <Card 
                 sx={{
                   position: "relative",
@@ -300,9 +301,9 @@ export default function PastCompetitions({past}) {
             </Typography>
           </Box>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={3} sx={{ width: "100%" }}>
             {myContests.map((item) => (
-            <Grid item xs={12} sm={6} md={4} key={item.id}>
+            <Grid item xs={12} sm={6} md={3} lg={2.4} key={item.id} sx={{ display: "flex" }}>
               <Card 
                 sx={{
                   position: "relative",

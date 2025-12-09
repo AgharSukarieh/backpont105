@@ -31,7 +31,10 @@ export const getAllTags = async () => {
  */
 export const getExplaineTagById = async (id) => {
   try {
-    const response = await api.get(`/ExplaineTag/GetExplaineTagById/${id}`);
+    const token = localStorage.getItem("token");
+    const response = await api.get(`/ExplaineTag/GetExplaineTagById?id=${id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     return response.data;
   } catch (error) {
     console.error("خطأ أثناء جلب تفاصيل الخوارزمية:", error);
@@ -46,7 +49,10 @@ export const getExplaineTagById = async (id) => {
  */
 export const getExplaineTagsByTagId = async (tagId) => {
   try {
-    const response = await api.get(`/ExplaineTag/GetExplaineTagsByTagId/${tagId}`);
+    const token = localStorage.getItem("token");
+    const response = await api.get(`/ExplaineTag/GetExplaineTagByTagId?id=${tagId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     // معالجة البيانات حسب شكل الاستجابة
     if (Array.isArray(response.data)) {
       return response.data;

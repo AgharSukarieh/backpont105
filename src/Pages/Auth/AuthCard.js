@@ -349,25 +349,20 @@ const AuthCard = ({
         pendingSignupData.trimmedUsername;
       const resolvedEmail = data.email ?? pendingSignupData.trimmedEmail;
 
-      setUser({
-        id: resolvedUserId,
-        name: resolvedName,
-        email: resolvedEmail,
-        role: data.role ?? "User",
-      });
-
-      localStorage.setItem("token", data.token);
-      if (pendingSignupData.signupRemember) {
-        persistRememberedCredentials({ email: resolvedEmail, remember: true });
-      } else {
-        clearRememberedCredentials();
-      }
-
+      // لا نقوم بتسجيل الدخول تلقائياً، بل ننتقل إلى كارت تسجيل الدخول
+      // حفظ البريد الإلكتروني للاستخدام في كارت تسجيل الدخول
+      setLoginEmail(resolvedEmail);
+      
+      // إغلاق modal OTP ومسح البيانات
       setShowOtpModal(false);
       setOtp("");
       setPendingSignupData(null);
-      showAlert("تم إنشاء الحساب بنجاح!", "success");
-      navigate("/dashboard", { replace: true });
+      
+      // الانتقال إلى كارت تسجيل الدخول
+      setIsFlipped(false);
+      
+      // إظهار رسالة نجاح
+      showAlert("تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول", "success");
     } catch (error) {
       showAlert(error.message || "خطأ أثناء التحقق من OTP", "error");
     } finally {

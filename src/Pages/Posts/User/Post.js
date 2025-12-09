@@ -799,7 +799,11 @@ const PostDetails = () => {
     // The container has display:flex; avatar then content. Content has a fixed padding-left where date sits absolute.
     return (
       <div className="flex gap-3 items-start" style={{ marginLeft: level * 20 }}>
-        <div onClick={()=>navigate(`/react-app/profile/${comment.userId}`)} className={`${level === 0 ? "w-10 h-10" : "w-8 h-8"} cursor-pointer `}>
+        <div onClick={()=>{
+          if (comment.userId) {
+            navigate(`/Profile/${comment.userId}`);
+          }
+        }} className={`${level === 0 ? "w-10 h-10" : "w-8 h-8"} cursor-pointer `}>
           {comment.imageURL ? (
             <img
               src={comment.imageURL}
@@ -831,7 +835,11 @@ const PostDetails = () => {
             )}
           </div>
 
-          <div onClick={()=>navigate(`/react-app/profile/${comment.userId}`)} className="text-sm cursor-pointer font-medium text-gray-900 text-right pr-12">
+          <div onClick={()=>{
+            if (comment.userId) {
+              navigate(`/Profile/${comment.userId}`);
+            }
+          }} className="text-sm cursor-pointer font-medium text-gray-900 text-right pr-12">
             {comment.userName || "Unknown"}
           </div>
 
@@ -975,7 +983,12 @@ const PostDetails = () => {
 
       <article className="bg-white border border-gray-100 rounded-xl shadow-sm p-5">
         <header className="flex items-center gap-4">
-          <div onClick={()=>navigate(`/react-app/profile/${localStorage.getItem("idUser")}`)} className="w-14 h-14 cursor-pointer relative flex-shrink-0">
+          <div onClick={()=>{
+            const currentUserId = localStorage.getItem("idUser");
+            if (currentUserId) {
+              navigate(`/Profile/${currentUserId}`);
+            }
+          }} className="w-14 h-14 cursor-pointer relative flex-shrink-0">
             {post.imageURL ? (
               <img
                 src={post.imageURL}
@@ -1003,7 +1016,12 @@ const PostDetails = () => {
               {/* show Views (property name from API is "Views") */}
               <div className="text-xs text-gray-400 mt-1">{(post.Views ?? post.views ?? 0)} مشاهدات</div>
             </div>
-            <div onClick={()=>navigate(`/react-app/profile/${localStorage.getItem("idUser")}`)} className="text-sm cursor-pointer font-medium text-gray-900 text-right pr-12">{post.userName || "Unknown"}</div>
+            <div onClick={()=>{
+              const currentUserId = localStorage.getItem("idUser");
+              if (currentUserId) {
+                navigate(`/Profile/${currentUserId}`);
+              }
+            }} className="text-sm cursor-pointer font-medium text-gray-900 text-right pr-12">{post.userName || "Unknown"}</div>
           </div>
         </header>
 

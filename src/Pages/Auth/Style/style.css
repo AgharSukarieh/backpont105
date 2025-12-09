@@ -32,7 +32,7 @@ body {
 
 body {
     font-family: 'Lemonade', cursive;
-    background-color: #00A99D;
+    background-color: #007C89;
     color: #333;
     direction: rtl;
     text-align: right;
@@ -43,7 +43,7 @@ body {
 
 /* ===== Header (شريط الرأس) ===== */
 .main-header {
-    background-color: #00A99D;
+    background-color: #007C89;
     padding: 10px 50px;
     overflow-x: hidden;
     width: 100%;
@@ -105,7 +105,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #00A99D; /* لون الخلفية الرئيسي */
+    background-color: #007C89; /* لون الخلفية الرئيسي */
     /* padding: 50px 20px;
     position: relative;
     overflow-x: hidden;
@@ -1198,7 +1198,7 @@ input[type="text"]:focus {
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: #00A99D;
+    accent-color: #007C89;
 }
 
 .remember-me label {
@@ -1210,14 +1210,14 @@ input[type="text"]:focus {
 
 .forgot-password {
     text-decoration: none;
-    color: #00A99D;
+    color: #007C89;
     font-size: 0.9em;
     font-weight: 500;
     transition: color 0.3s ease;
 }
 
 .forgot-password:hover {
-    color: #008B8B;
+    color: #006a75;
 }
 
 /* Button Group */
@@ -1240,24 +1240,24 @@ input[type="text"]:focus {
 }
 
 .btn-primary {
-    background-color: #00A99D;
+    background-color: #007C89;
     color: white;
 }
 
 .btn-primary:hover {
-    background-color: #008B8B;
-    box-shadow: 0 4px 12px rgba(0, 169, 157, 0.3);
+    background-color: #006a75;
+    box-shadow: 0 4px 12px rgba(0, 124, 137, 0.3);
 }
 
 .btn-secondary {
     background-color: #fff;
-    color: #00A99D;
-    border: 1px solid #00A99D;
+    color: #007C89;
+    border: 1px solid #007C89;
 }
 
 .btn-secondary:hover {
     background-color: #f0f0f0;
-    border-color: #00A99D;
+    border-color: #007C89;
 }
 
 /* Social Section */
@@ -1464,7 +1464,7 @@ input[type="text"]:focus {
 
 /* ===== Footer (شريط التذييل) ===== */
 .main-footer {
-    background-color: #00A99D;
+    background-color: #007C89;
     color: #fff;
     padding: 15px 50px;
     font-size: 0.85em;
@@ -1873,7 +1873,7 @@ input[type="text"]:focus {
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: #0d6e7f;
+    accent-color: #007C89;
 }
 
 .checkbox-label {
@@ -1904,14 +1904,14 @@ input[type="text"]:focus {
 }
 
 .signup-card-new .btn-primary {
-    background-color: #0d6e7f;
+    background-color: #007C89;
     color: white;
 }
 
 .signup-card-new .btn-primary:hover {
-    background-color: #0a5568;
+    background-color: #006a75;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(13, 110, 127, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 124, 137, 0.3);
 }
 
 .signup-card-new .btn-primary:active {
@@ -1920,8 +1920,8 @@ input[type="text"]:focus {
 
 .signup-card-new .btn-secondary {
     background-color: white;
-    color: #0d6e7f;
-    border: 2px solid #0d6e7f;
+    color: #007C89;
+    border: 2px solid #007C89;
 }
 
 .signup-card-new .btn-secondary:hover {

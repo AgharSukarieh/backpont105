@@ -74,7 +74,11 @@ const CommentsModal = ({ postId, onClose }) => {
                 className="flex gap-3 items-start border rounded-md p-3"
               >
                 <div
-                  onClick={() => navigate(`/react-app/profile/${c.userId}`)}
+                  onClick={() => {
+                    if (c.userId) {
+                      navigate(`/Profile/${c.userId}`);
+                    }
+                  }}
                   className={`w-10 h-10 rounded-full overflow-hidden flex-shrink-0 cursor-pointer`}
                 >
                   {c.imageURL ? (
@@ -109,7 +113,11 @@ const CommentsModal = ({ postId, onClose }) => {
                   </div>
 
                   <div
-                    onClick={() => navigate(`/react-app/profile/${c.userId}`)}
+                    onClick={() => {
+                    if (c.userId) {
+                      navigate(`/Profile/${c.userId}`);
+                    }
+                  }}
                     className="text-sm cursor-pointer font-medium text-gray-900 text-right pr-12"
                   >
                     {c.userName || c.authorName || "Unknown"}

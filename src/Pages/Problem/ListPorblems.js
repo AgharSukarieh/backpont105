@@ -30,8 +30,10 @@ const ProblemsList = () => {
   const handlePrev = () => page > 1 && setPage((prev) => prev - 1);
 
   const goToUserProfile = (userId) => {
-    // توجه إلى صفحة المستخدم، افتراضياً /user/:id
-    navigate(`/user/${userId}`);
+    // توجه إلى صفحة المستخدم
+    if (userId) {
+      navigate(`/Profile/${userId}`);
+    }
   };
 
   if (loading) return <LoadingCartoon />;

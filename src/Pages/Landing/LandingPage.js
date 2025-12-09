@@ -23,23 +23,27 @@ import logoIbm from "../../assets/IBM-Logo-Gray 1 (1).png";
 import logoHuawei from "../../assets/huawei-logo-image-xe9bcp6dj3fkug8v 1 (1).png";
 import ctaArrowIcon from "../../assets/Vector 11.png";
 import foundersIcon from "../../assets/Component 20.png";
+import sameerImage from "../../assets/sameer.png";
+import nedalImage from "../../assets/nedal.png";
+import agharImage from "../../assets/aghar.jpeg";
+import aboodImage from "../../assets/abood.jpeg";
 
 const craftedTeamMembers = [
   {
     name: "الاغر سكريه",
-    image: "https://i.pravatar.cc/160?img=47",
+    image: agharImage,
   },
   {
-    name: "بد الرحمان صافي",
-    image: "https://i.pravatar.cc/160?img=15",
+    name: "عبد الرحمن الصافي",
+    image: aboodImage,
   },
   {
     name: "احمد نضال",
-    image: "https://i.pravatar.cc/160?img=11",
+    image: nedalImage,
   },
   {
-    name: "سميؤ ما زن",
-    image: "https://i.pravatar.cc/160?img=22",
+    name: "سمير مازن صندوقه",
+    image: sameerImage,
   },
 ];
 

@@ -370,13 +370,14 @@
   text-decoration: none;
   font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(140deg, #0f62fe, #0f82ff);
+  background: #007C89;
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
 .dashboard-panel__cta-button:hover {
   transform: translateY(-2px);
-  background: linear-gradient(140deg, #0d5ae0, #0f62fe);
+  background: #006a75;
+  box-shadow: 0 4px 12px rgba(0, 124, 137, 0.3);
 }
 
 .dashboard-home__footer {

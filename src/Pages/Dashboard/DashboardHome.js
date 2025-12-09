@@ -13,13 +13,14 @@ import {
   UserCheck,
 } from "lucide-react";
 import LandingNav from "../../components/LandingNav";
-import dashboardLogo from "../../assets/Component 19 (1).png";
+import dashboardLogo from "../../assets/logo.png";
 import defaultAvatar from "../../assets/Ellipse10.png";
 import { clearCredentials, selectAuthUser, selectAuthSession } from "../../store/authSlice";
 import UserProfile from "../User/UserProfile";
 import ProblemsList from "../Problems/ProblemsList";
 import Algorithms from "../Algorithms/Algorithms";
 import Layout from "../Contest/Layout";
+import InfluencerPage from "./InfluencerPage";
 import { fetchNotificationsByUser, getUnreadNotificationsCount } from "../../Service/NotificationServices";
 import "../Auth/login.css";
 import "./dashboardHome.css";
@@ -796,6 +797,8 @@ const DashboardHome = () => {
               <Algorithms />
             ) : activeTab === "contests" ? (
               <Layout />
+            ) : activeTab === "influencer" ? (
+              <InfluencerPage />
             ) : (
               <section
                 key={activeTab}

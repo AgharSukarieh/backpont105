@@ -1,5 +1,6 @@
 import { Card, Box, Typography, CardMedia } from "@mui/material";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { keyframes } from "@mui/system";
@@ -31,6 +32,7 @@ const glowAnimation = keyframes`
 `;
 
 export default function Leaderboard() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -145,7 +147,14 @@ export default function Leaderboard() {
           </Typography>
 
           {/* Avatar with border */}
-          <Box sx={{ ml: 1, position: "relative" }}>
+          <Box 
+            sx={{ ml: 1, position: "relative", cursor: "pointer" }}
+            onClick={() => {
+              if (u.id || u.userId) {
+                navigate(`/Profile/${u.id || u.userId}`);
+              }
+            }}
+          >
             <CardMedia
               component="img"
               image={u.imageURL || "https://via.placeholder.com/45"}
@@ -160,7 +169,11 @@ export default function Leaderboard() {
                 marginLeft: "8px",
                 borderRadius: "100%",
                 border: "3px solid",
-                borderColor: borderColors[u.rank] || "#f0f0f0"
+                borderColor: borderColors[u.rank] || "#f0f0f0",
+                transition: "transform 0.2s ease",
+                "&:hover": {
+                  transform: "scale(1.05)"
+                }
               }}
             />
             {getCrownImage(u.rank) && (
@@ -182,14 +195,24 @@ export default function Leaderboard() {
             )}
           </Box>
 
-          <Box sx={{ mr: 1 }}>
+          <Box 
+            sx={{ mr: 1, cursor: "pointer" }}
+            onClick={() => {
+              if (u.id || u.userId) {
+                navigate(`/Profile/${u.id || u.userId}`);
+              }
+            }}
+          >
             <Typography sx={{ 
               margin: "0px",
               fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
               fontWeight: "lighter",
               fontSize: "1.4rem",
               lineHeight: 1.5,
-              letterSpacing: "0.00938em"
+              letterSpacing: "0.00938em",
+              "&:hover": {
+                color: "#6366f1"
+              }
             }}>
               {u.userName}
             </Typography>

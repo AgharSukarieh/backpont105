@@ -34,11 +34,26 @@ const Algorithms = () => {
         for (const tag of data || []) {
           try {
             const algos = await getExplaineTagsByTagId(tag.id);
-            console.log(`📚 Algorithms for tag ${tag.id}:`, algos);
+            console.log(`📚 Algorithms for tag ${tag.id} (${tag.tagName}):`, {
+              raw: algos,
+              isArray: Array.isArray(algos),
+              length: Array.isArray(algos) ? algos.length : 'not array',
+              type: typeof algos
+            });
+            
+            // التأكد من أن algos هي مصفوفة
+            const algorithmsArray = Array.isArray(algos) ? algos : [];
+            
+            if (algorithmsArray.length === 0) {
+              console.warn(`⚠️ No algorithms found for tag ${tag.id} (${tag.tagName})`);
+              allAlgorithms[tag.id] = [];
+              setLoadingAlgorithms((prev) => ({ ...prev, [tag.id]: false }));
+              continue;
+            }
             
             // جلب التفاصيل الكاملة لكل خوارزمية من GetExplaineTagById للحصول على complexity
             const algosWithDetails = await Promise.all(
-              (algos || []).map(async (algo) => {
+              algorithmsArray.map(async (algo) => {
                 try {
                   const fullDetails = await getExplaineTagById(algo.id);
                   console.log(`🔍 Fetched details for algo ${algo.id} from GetExplaineTagById:`, {
@@ -77,9 +92,10 @@ const Algorithms = () => {
             });
             
             allAlgorithms[tag.id] = algosWithDescription;
+            console.log(`✅ Successfully loaded ${algosWithDescription.length} algorithms for tag ${tag.id} (${tag.tagName})`);
             setLoadingAlgorithms((prev) => ({ ...prev, [tag.id]: false }));
           } catch (err) {
-            console.error(`❌ Error fetching algorithms for tag ${tag.id}:`, err);
+            console.error(`❌ Error fetching algorithms for tag ${tag.id} (${tag.tagName}):`, err);
             allAlgorithms[tag.id] = [];
             setLoadingAlgorithms((prev) => ({ ...prev, [tag.id]: false }));
           }
@@ -178,9 +194,30 @@ const Algorithms = () => {
                       <div className="loading-spinner-small"></div>
                       <span>جارٍ تحميل الخوارزميات...</span>
                     </div>
-                  ) : algorithms[tag.id]?.length > 0 ? (
-                    <div className="algorithms-grid">
-                      {algorithms[tag.id].map((algo, index) => (
+                  ) : (() => {
+                    // التحقق بشكل أفضل من وجود الخوارزميات
+                    const tagAlgorithms = algorithms[tag.id];
+                    const hasAlgorithms = Array.isArray(tagAlgorithms) && tagAlgorithms.length > 0;
+                    
+                    console.log(`🔍 Tag ${tag.id} (${tag.tagName}):`, {
+                      hasAlgorithms,
+                      algorithmsCount: Array.isArray(tagAlgorithms) ? tagAlgorithms.length : 0,
+                      algorithms: tagAlgorithms,
+                      loading: loadingAlgorithms[tag.id]
+                    });
+                    
+                    if (!hasAlgorithms) {
+                      return (
+                        <div className="algorithms-list-empty">
+                          <i className="bx bx-info-circle"></i>
+                          <p>لا توجد خوارزميات متاحة لهذا التصنيف حالياً</p>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="algorithms-grid">
+                        {tagAlgorithms.map((algo, index) => (
                         <div
                           key={algo.id}
                           className={`algorithm-item algorithm-item--color-${(index % 8) + 1}`}
@@ -217,14 +254,10 @@ const Algorithms = () => {
                             </span>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="algorithms-list-empty">
-                      <i className="bx bx-info-circle"></i>
-                      <p>لا توجد خوارزميات متاحة لهذا التصنيف حالياً</p>
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
