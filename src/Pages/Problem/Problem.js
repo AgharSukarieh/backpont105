@@ -2,12 +2,20 @@ import React, { useEffect, useState } from "react";
 import { getProblemById } from "../../Service/ProblemService";
 import LoadingCartoon from "../Loading";
 import { useParams, useNavigate } from "react-router-dom";
+import DOMPurify from "dompurify";
 
 const ProblemDetail = () => {
   const { id } = useParams(); // رقم المشكلة من الرابط /problem/:id
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // دالة لتنظيف HTML قبل العرض
+  const sanitizeHtml = (dirty) =>
+    DOMPurify.sanitize(dirty ?? "", {
+      ALLOWED_TAGS: ["p", "br", "strong", "em", "u", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "a", "img", "div", "span", "pre", "code", "blockquote"],
+      ALLOWED_ATTR: ["href", "src", "alt", "class", "style"],
+    });
 
   useEffect(() => {
     const fetchProblem = async () => {
@@ -51,23 +59,23 @@ const ProblemDetail = () => {
 
       <div style={{ marginTop: "10px" }}>
         <h3>وصف المشكلة:</h3>
-        <p>{problem.descriptionProblem}</p>
+        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionProblem) }} />
       </div>
 
       <div style={{ marginTop: "10px" }}>
         <h3>مدخلات:</h3>
-        <p>{problem.descriptionInput}</p>
+        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionInput) }} />
       </div>
 
       <div style={{ marginTop: "10px" }}>
         <h3>مخرجات:</h3>
-        <p>{problem.descriptionOutput}</p>
+        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionOutput) }} />
       </div>
 
       {problem.authorNotes && (
         <div style={{ marginTop: "10px" }}>
           <h3>ملاحظات المؤلف:</h3>
-          <p>{problem.authorNotes}</p>
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.authorNotes) }} />
         </div>
       )}
 

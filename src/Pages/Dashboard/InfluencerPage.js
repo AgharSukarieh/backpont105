@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectAuthSession } from "../../store/authSlice";
 import api from "../../Service/api";
+import DOMPurify from "dompurify";
 import "./influencerPage.css";
 
 const InfluencerPage = () => {
@@ -11,6 +12,13 @@ const InfluencerPage = () => {
   const currentUserId = session?.responseUserDTO?.id;
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // دالة لتنظيف HTML قبل العرض
+  const sanitizeHtml = (dirty) =>
+    DOMPurify.sanitize(dirty ?? "", {
+      ALLOWED_TAGS: ["p", "br", "strong", "em", "u", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "a", "img", "div", "span", "pre", "code", "blockquote"],
+      ALLOWED_ATTR: ["href", "src", "alt", "class", "style"],
+    });
 
   // جلب المساهمات السابقة
   useEffect(() => {
@@ -139,9 +147,10 @@ const InfluencerPage = () => {
                     <h3 className="influencer-page__contribution-title">
                       {contribution.title || "السوال الاول"}
                     </h3>
-                    <p className="influencer-page__contribution-description">
-                      {contribution.descriptionProblem || "descriptionProblem"}
-                    </p>
+                    <div 
+                      className="influencer-page__contribution-description"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(contribution.descriptionProblem || "descriptionProblem") }}
+                    />
                     {contribution.tagsRequest && contribution.tagsRequest.length > 0 && (
                       <div className="influencer-page__contribution-tags">
                         {contribution.tagsRequest.map((tag, tagIndex) => (

@@ -27,7 +27,7 @@ import copyrightImg from "../../assets/copyright.png";
 
 const BOXICON_LINK_ID = "auth-boxicons-link";
 const BOXICON_HREF = "https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css";
-const REGISTER_URL = "http://arabcodetest.runasp.net/Authantication/register";
+const REGISTER_URL = "http://arabcodetest.runasp.net/api/auth/register";
 const COUNTRIES_URL = "http://arabcodetest.runasp.net/Country/GetAllCountries";
 
 const DEFAULT_COUNTRIES = [
@@ -293,7 +293,7 @@ const AuthCard = ({
         otp: otpValue
       });
 
-      // إرسال بيانات التسجيل مع OTP (حسب API documentation)
+      // إرسال بيانات التسجيل مع OTP (POST request مع query parameters و FormData)
       const queryParams = new URLSearchParams({
         Email: pendingSignupData.trimmedEmail,
         Password: pendingSignupData.trimmedPassword,
@@ -302,14 +302,19 @@ const AuthCard = ({
         otp: otpValue, // lowercase كما في API documentation
       });
 
+      // استخدام POST مع multipart/form-data
       const formData = new FormData();
       if (pendingSignupData.signupImage) {
-        formData.append("image", pendingSignupData.signupImage);
+        formData.append("Image", pendingSignupData.signupImage);
+      } else {
+        // إرسال FormData فارغ إذا لم تكن هناك صورة
+        formData.append("Image", "");
       }
 
       const response = await fetch(`${REGISTER_URL}?${queryParams.toString()}`, {
         method: "POST",
         body: formData,
+        // لا نضيف Content-Type header - المتصفح سيضيفه تلقائياً مع boundary
       });
 
       let data = null;
@@ -452,6 +457,7 @@ const AuthCard = ({
 
     setOtpLoading(true);
     try {
+      // استخدام نفس الدالة sendOtp المستخدمة أول مرة
       console.log("Resending OTP for:", pendingSignupData.trimmedEmail);
       await sendOtp(pendingSignupData.trimmedEmail);
       showAlert("تم إرسال رمز التحقق مرة أخرى", "success");

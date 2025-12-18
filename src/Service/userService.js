@@ -2,7 +2,7 @@ import api from "./api";
 
 export const loginUser = async (email, password) => {
   try {
-    const response = await api.post("/Authantication/login", {
+    const response = await api.post("/api/auth/login", {
       Email: email,
       Password: password,
     });
@@ -79,10 +79,10 @@ export const sendOtp = async (email) => {
     
     console.log("Sending OTP request:", { email: emailValue });
     
-    // استخدام POST بدلاً من GET (حسب API documentation - POST /Authantication/Send-otp)
-    const response = await api.post(`/Authantication/Send-otp`, null, {
-      params: {
-        Email: emailValue
+    // استخدام POST مع Email في query string (حسب Swagger)
+    const response = await api.post(`/api/auth/otp?Email=${encodeURIComponent(emailValue)}`, null, {
+      headers: {
+        "accept": "*/*",
       }
     });
     
@@ -91,6 +91,7 @@ export const sendOtp = async (email) => {
   } catch (err) {
     console.error("Error sending OTP:", err?.response?.data || err);
     const errorMessage = err?.response?.data?.message || 
+                        err?.response?.data ||
                         err?.message ||
                         "خطأ في إرسال رمز التحقق";
     throw new Error(errorMessage);
@@ -139,9 +140,10 @@ export const sendOtpForRestorePassword = async (email) => {
     
     console.log("Sending OTP for password restoration:", { email: emailValue });
     
-    const response = await api.post(`/Authantication/SendOTPForRestorePassword`, null, {
-      params: {
-        Email: emailValue
+    // استخدام POST مع Email في query string
+    const response = await api.post(`/api/auth/password/reset?Email=${encodeURIComponent(emailValue)}`, null, {
+      headers: {
+        "accept": "*/*",
       }
     });
     
@@ -150,6 +152,7 @@ export const sendOtpForRestorePassword = async (email) => {
   } catch (err) {
     console.error("Error sending OTP for restore password:", err?.response?.data || err);
     const errorMessage = err?.response?.data?.message || 
+                        err?.response?.data ||
                         err?.message ||
                         "خطأ في إرسال رمز التحقق";
     throw new Error(errorMessage);
@@ -167,12 +170,14 @@ export const restorePassword = async (email, otp, newPassword) => {
     
     console.log("Restoring password:", { email: emailValue, otp: otpValue });
     
-    const response = await api.post(`/Authantication/RestorationPassword`, {
+    // استخدام POST إلى /api/auth/password/reset/confirm مع body
+    const response = await api.post(`/api/auth/password/reset/confirm`, {
       email: emailValue,
       otp: otpValue,
       password: newPassword
     }, {
       headers: {
+        'accept': '*/*',
         'Content-Type': 'application/json'
       }
     });
@@ -182,7 +187,7 @@ export const restorePassword = async (email, otp, newPassword) => {
   } catch (err) {
     console.error("Error restoring password:", err?.response?.data || err);
     const errorMessage = err?.response?.data?.message || 
-                        err?.response?.data?.errors ||
+                        err?.response?.data ||
                         err?.message ||
                         "خطأ في استعادة كلمة المرور";
     throw new Error(errorMessage);

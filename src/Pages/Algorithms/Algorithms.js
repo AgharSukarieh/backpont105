@@ -216,7 +216,7 @@ const Algorithms = () => {
                     }
                     
                     return (
-                      <div className="algorithms-grid">
+                    <div className="algorithms-grid">
                         {tagAlgorithms.map((algo, index) => (
                         <div
                           key={algo.id}
@@ -254,8 +254,8 @@ const Algorithms = () => {
                             </span>
                           </div>
                         </div>
-                        ))}
-                      </div>
+                      ))}
+                    </div>
                     );
                   })()}
                 </div>

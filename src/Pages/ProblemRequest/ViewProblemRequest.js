@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import DOMPurify from "dompurify";
 
 // بيانات وهمية للـ Tags
 const allTags = [
@@ -9,6 +10,12 @@ const allTags = [
 ];
 
 const ViewProblemRequest = () => {
+  // دالة لتنظيف HTML قبل العرض
+  const sanitizeHtml = (dirty) =>
+    DOMPurify.sanitize(dirty ?? "", {
+      ALLOWED_TAGS: ["p", "br", "strong", "em", "u", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "a", "img", "div", "span", "pre", "code", "blockquote"],
+      ALLOWED_ATTR: ["href", "src", "alt", "class", "style"],
+    });
   const [problem] = useState({
     id: 1,
     title: "Binary Search Implementation",
@@ -44,7 +51,7 @@ const ViewProblemRequest = () => {
 
         <div>
           <strong>Description Problem:</strong>
-          <p>{problem.descriptionProblem}</p>
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionProblem) }} />
         </div>
 
         {problem.imageUrl && (
@@ -56,17 +63,17 @@ const ViewProblemRequest = () => {
 
         <div>
           <strong>Description Input:</strong>
-          <p>{problem.descriptionInput}</p>
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionInput) }} />
         </div>
 
         <div>
           <strong>Description Output:</strong>
-          <p>{problem.descriptionOutput}</p>
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionOutput) }} />
         </div>
 
         <div>
           <strong>Author Notes:</strong>
-          <p>{problem.authorNotes}</p>
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.authorNotes) }} />
         </div>
 
         <div className="grid grid-cols-3 gap-4">

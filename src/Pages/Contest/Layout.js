@@ -78,12 +78,12 @@ return (
   
         {/* إعادة ترتيب المحتوى هنا */}
         <AvailableCompetitions available={availableCompetitions} />
-        
+
         {/* Leaderboard على اليمين و PastCompetitions على يسارها */}
         <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start", justifyContent: "flex-end", direction: "rtl", mt: 3, width: "100%" }}>
           <Leaderboard />
           <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
-            <PastCompetitions past={pastCompetitions} />
+              <PastCompetitions past={pastCompetitions} />
           </Box>
         </Box>
 

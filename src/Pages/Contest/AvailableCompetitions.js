@@ -47,11 +47,11 @@ export default function AvailableCompetitions({ available}) {
   }, [available]);
 
   const handleNext = () => {
-    setVisibleItems(prev => prev.map(i => (i + 1) % available.length));
+      setVisibleItems(prev => prev.map(i => (i + 1) % available.length));
   };
 
   const handlePrev = () => {
-    setVisibleItems(prev => prev.map(i => (i - 1 + available.length) % available.length));
+      setVisibleItems(prev => prev.map(i => (i - 1 + available.length) % available.length));
   };
 
 

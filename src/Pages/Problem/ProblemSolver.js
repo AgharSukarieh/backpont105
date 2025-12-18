@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { selectAuthSession } from "../../store/authSlice";
 import { getProblemById } from "../../Service/ProblemService";
 import { handelSubmission } from "../../Service/submissionServices";
+import DOMPurify from "dompurify";
 import "./problemSolver.css";
 
 const ProblemSolver = () => {
@@ -18,6 +19,13 @@ const ProblemSolver = () => {
   const [testResults, setTestResults] = useState(null);
   const [leftWidth, setLeftWidth] = useState(50); // النسبة المئوية للجزء الأيسر
   const [isResizing, setIsResizing] = useState(false);
+
+  // دالة لتنظيف HTML قبل العرض
+  const sanitizeHtml = (dirty) =>
+    DOMPurify.sanitize(dirty ?? "", {
+      ALLOWED_TAGS: ["p", "br", "strong", "em", "u", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "a", "img", "div", "span", "pre", "code", "blockquote"],
+      ALLOWED_ATTR: ["href", "src", "alt", "class", "style"],
+    });
   const codeEditorRef = useRef(null);
   const lineNumbersRef = useRef(null);
   const splitRef = useRef(null);
@@ -303,22 +311,27 @@ int main() {
                 {/* Description */}
                 <div className="solver-section">
                   <h2 className="solver-section-title">وصف المسألة</h2>
-                  <p className="solver-text">{problem.descriptionProblem}</p>
+                  <div 
+                    className="solver-text" 
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionProblem) }}
+                  />
                 </div>
 
                 {/* Input/Output */}
                 <div className="solver-section">
                   <h2 className="solver-section-title">المدخلات</h2>
-                  <div className="solver-code-block">
-                    <pre>{problem.descriptionInput}</pre>
-                  </div>
+                  <div 
+                    className="solver-code-block"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionInput) }}
+                  />
                 </div>
 
                 <div className="solver-section">
                   <h2 className="solver-section-title">المخرجات</h2>
-                  <div className="solver-code-block">
-                    <pre>{problem.descriptionOutput}</pre>
-                  </div>
+                  <div 
+                    className="solver-code-block"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.descriptionOutput) }}
+                  />
                 </div>
 
                 {/* Constraints */}
@@ -335,7 +348,7 @@ int main() {
                   <div className="solver-section">
                     <div className="solver-notes">
                       <strong>ملاحظات: </strong>
-                      {problem.authorNotes}
+                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(problem.authorNotes) }} />
                     </div>
                   </div>
                 )}

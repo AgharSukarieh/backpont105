@@ -113,8 +113,8 @@ export default function Leaderboard() {
       }}>
         <EmojiEventsIcon sx={{ fontSize: 28, color: "#FFC01D" }} />
         <Typography variant="h6" sx={{ color: "black", fontWeight: "bold", margin: 0 }}>
-          التصنيف على مستوى المملكة
-        </Typography>
+        التصنيف على مستوى المملكة
+      </Typography>
       </Box>
 
       {users.map((u, i) => (

@@ -227,8 +227,8 @@ export default function ContestProblems() {
                   "&:hover": {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
                   }
-                }}
-              >
+            }}
+          >
                 <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
                   {/* Right side - Problem Info */}
                   <Box sx={{ flex: 1 }}>
@@ -269,8 +269,8 @@ export default function ContestProblems() {
                             color: "#7B1FA2",
                             textDecoration: "underline",
                             cursor: "pointer"
-                          }}
-                        >
+                        }}
+                      >
                           {problem.userName}
                         </Typography>
                       )}
@@ -302,7 +302,7 @@ export default function ContestProblems() {
                           color: "#4CAF50",
                           fontWeight: "bold",
                           fontSize: "0.75rem"
-                        }}
+                      }}
                       />
                     )}
 
@@ -318,7 +318,7 @@ export default function ContestProblems() {
                   </Box>
                 </Box>
               </Card>
-            ))}
+                  ))}
           </Box>
         )}
       </Box>

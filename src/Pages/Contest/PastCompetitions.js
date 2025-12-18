@@ -97,7 +97,7 @@ export default function PastCompetitions({past}) {
     <Card sx={{ p: 2, 
     borderRadius: 4, 
     direction: "rtl",
-    width: "100%",
+    width: "100%", 
     maxWidth: "100%",
     minHeight: 400,
     bgcolor: "#ffffff",
@@ -117,9 +117,9 @@ export default function PastCompetitions({past}) {
         direction: "rtl",
         width: "100%"
       }}>
-        <Tabs
-          value={tab}
-          onChange={(e, v) => { setTab(v); setSelectedCompetition(null); }}
+      <Tabs
+        value={tab}
+        onChange={(e, v) => { setTab(v); setSelectedCompetition(null); }}
           sx={{ 
             mb: 2,
             "& .MuiTabs-scroller": {
@@ -136,10 +136,10 @@ export default function PastCompetitions({past}) {
             },
             direction: "rtl"
           }}
-        >
-          <Tab label="المسابقات" sx={{ fontWeight: "bold", fontSize: "20px" }} />
-          <Tab label="مسابقاتي" sx={{ fontWeight: "bold", fontSize: "20px" }} />
-        </Tabs>
+      >
+        <Tab label="المسابقات" sx={{ fontWeight: "bold", fontSize: "20px" }} />
+        <Tab label="مسابقاتي" sx={{ fontWeight: "bold", fontSize: "20px" }} />
+      </Tabs>
       </Box>
 
       {selectedCompetition ? (
@@ -162,7 +162,7 @@ export default function PastCompetitions({past}) {
                   borderRadius: 4,
                   overflow: "hidden",
                   height: "100%",
-                  display: "flex",
+                display: "flex",
                   flexDirection: "column",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                   transition: "all 0.3s ease",
@@ -254,7 +254,7 @@ export default function PastCompetitions({past}) {
                         <SchoolIcon sx={{ fontSize: 18, color: "#6b7280" }} />
                         <Typography variant="body2" sx={{ color: "#6b7280" }}>
                           {c.universityName}
-                        </Typography>
+                  </Typography>
                       </Box>
                     )}
                   </Box>
@@ -305,12 +305,12 @@ export default function PastCompetitions({past}) {
             {myContests.map((item) => (
             <Grid item xs={12} sm={6} md={3} lg={2.4} key={item.id} sx={{ display: "flex" }}>
               <Card 
-                sx={{
+              sx={{
                   position: "relative",
                   borderRadius: 4,
                   overflow: "hidden",
                   height: "100%",
-                  display: "flex",
+                display: "flex",
                   flexDirection: "column",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                   transition: "all 0.3s ease",
@@ -322,8 +322,8 @@ export default function PastCompetitions({past}) {
                 }}
                 onClick={() => navigate(`/ViewContest/${item.id}`)}
               >
-                <CardMedia
-                  component="img"
+              <CardMedia
+                component="img"
                   image={item.imageURL && item.imageURL !== "" ? item.imageURL : "https://via.placeholder.com/400x200"}
                   sx={{ 
                     width: "100%", 
@@ -416,7 +416,7 @@ export default function PastCompetitions({past}) {
                   >
                     عرض التفاصيل
                   </Button>
-                </Box>
+            </Box>
               </Card>
             </Grid>
           ))}
