@@ -327,7 +327,7 @@ const AdminDashboard = () => {
     localStorage.removeItem("userName");
     localStorage.removeItem("user");
     setUser(null);
-    navigate("/login");
+    navigate("/react-app/login");
   };
 
   const menuItems = [

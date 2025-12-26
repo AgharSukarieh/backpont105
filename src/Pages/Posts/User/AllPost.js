@@ -1747,7 +1747,7 @@ const PostsPage = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     // نفس سلوك dashboard-home__profile-header - الانتقال إلى Dashboard مع فتح التاب profile
-                    navigate("/dashboard", { 
+                    navigate("/react-app/dashboard", { 
                       state: { openProfile: true } 
                     });
                     setTimeout(() => {
@@ -2088,7 +2088,7 @@ const PostsPage = () => {
                       onClick={() => {
                         console.log(`🔄 Navigating to Dashboard with algorithms tab and tagId: ${tagId}`);
                         // الانتقال إلى dashboard مع tab algorithms وفتح التاغ المحدد
-                        navigate("/dashboard", { 
+                        navigate("/react-app/dashboard", { 
                           state: { 
                             activeTab: "algorithms",
                             expandedTagId: Number(tagId)
@@ -2100,7 +2100,7 @@ const PostsPage = () => {
                           e.preventDefault();
                           console.log(`🔄 Navigating to Dashboard with algorithms tab and tagId: ${tagId}`);
                           // الانتقال إلى dashboard مع tab algorithms وفتح التاغ المحدد
-                          navigate("/dashboard", { 
+                          navigate("/react-app/dashboard", { 
                             state: { 
                               activeTab: "algorithms",
                               expandedTagId: Number(tagId)

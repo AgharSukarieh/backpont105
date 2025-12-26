@@ -153,7 +153,7 @@ export default function Leaderboard() {
             sx={{ ml: 1, position: "relative", cursor: "pointer" }}
             onClick={() => {
               if (u.id || u.userId) {
-                navigate(`/Profile/${u.id || u.userId}`);
+                navigate(`/react-app/Profile/${u.id || u.userId}`);
               }
             }}
           >
@@ -201,7 +201,7 @@ export default function Leaderboard() {
             sx={{ mr: 1, cursor: "pointer" }}
             onClick={() => {
               if (u.id || u.userId) {
-                navigate(`/Profile/${u.id || u.userId}`);
+                navigate(`/react-app/Profile/${u.id || u.userId}`);
               }
             }}
           >

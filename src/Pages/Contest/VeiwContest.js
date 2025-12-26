@@ -217,7 +217,7 @@ export default function ContestProblems() {
           )}
           <Button 
             variant="contained" 
-            onClick={() => navigate("/dashboard", { state: { activeTab: "contests" } })} 
+            onClick={() => navigate("/react-app/dashboard", { state: { activeTab: "contests" } })} 
             sx={{ 
               mt: 2, 
               bgcolor: "#007C89",
@@ -251,7 +251,7 @@ export default function ContestProblems() {
           </Typography>
           <Button 
             variant="contained" 
-            onClick={() => navigate("/dashboard", { state: { activeTab: "contests" } })} 
+            onClick={() => navigate("/react-app/dashboard", { state: { activeTab: "contests" } })} 
             sx={{ 
               mt: 2, 
               bgcolor: "#007C89",
@@ -432,7 +432,7 @@ export default function ContestProblems() {
       {/* Header */}
       <div className="contest-detail-header">
         <button
-          onClick={() => navigate("/dashboard", { state: { activeTab: "contests" } })}
+          onClick={() => navigate("/react-app/dashboard", { state: { activeTab: "contests" } })}
           className="contest-detail-back-btn"
           aria-label="العودة"
         >
@@ -939,7 +939,7 @@ export default function ContestProblems() {
                       <Card
                         key={problem.id}
                         className="problem-card-item"
-                        onClick={() => navigate(`/problem/${problem.id}`, { 
+                        onClick={() => navigate(`/react-app/problem/${problem.id}`, { 
                           state: { 
                             fromContest: true, 
                             contestId: id,

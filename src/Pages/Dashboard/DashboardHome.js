@@ -717,7 +717,7 @@ const DashboardHome = () => {
   const handleLogout = () => {
     setProfileMenuOpen(false);
     dispatch(clearCredentials());
-    navigate("/login", { replace: true });
+    navigate("/react-app/login", { replace: true });
   };
 
   const handleNavClick = useCallback((event, link) => {

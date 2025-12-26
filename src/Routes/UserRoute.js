@@ -6,8 +6,8 @@ import ContestProblems from "../Pages/Contest/VeiwContest";
 export const UserRoutes = (
   <>
 
-    <Route path="/Profile/:id" element={<UserProfile />}  />
-    <Route path="/ViewContest/:id" element={<ContestProblems />}  />
+    <Route path="/react-app/Profile/:id" element={<UserProfile />}  />
+    <Route path="/react-app/ViewContest/:id" element={<ContestProblems />}  />
     
     
     

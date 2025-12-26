@@ -7,10 +7,10 @@ import SubmissionDetail from "../Pages/Submission/SubmissionDetail";
 export const SubmissionRoutes = (
   <>
     
-    <Route path="/submissions/:id" element={ <UserSubmissions /> } />
+    <Route path="/react-app/submissions/:id" element={ <UserSubmissions /> } />
 
     <Route
-      path="/submission/:id"
+      path="/react-app/submission/:id"
       element={
         <PrivateRoute>
           <SubmissionDetail />

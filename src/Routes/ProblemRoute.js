@@ -5,8 +5,8 @@ import ProblemSolver from "../Pages/Problem/ProblemSolver";
 
 export const ProblemRoutes = (
   <>
-    <Route path="/problems" element={<Problem />} />
-    <Route path="/Problem/:id" element={<ProblemSolver />} />
-    <Route path="/problem/:id" element={<ProblemSolver />} />
+    <Route path="/react-app/problems" element={<Problem />} />
+    <Route path="/react-app/Problem/:id" element={<ProblemSolver />} />
+    <Route path="/react-app/problem/:id" element={<ProblemSolver />} />
   </>
 );

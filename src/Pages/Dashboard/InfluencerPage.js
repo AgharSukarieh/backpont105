@@ -141,7 +141,7 @@ const InfluencerPage = () => {
             </p>
             <button 
               className="influencer-page__cta-button"
-              onClick={() => navigate("/addProblemProposal")}
+              onClick={() => navigate("/react-app/addProblemProposal")}
             >
               اضافة
             </button>

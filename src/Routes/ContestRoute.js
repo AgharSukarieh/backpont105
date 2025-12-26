@@ -6,7 +6,7 @@ export const ContestRoutes = (
   <>
     
     
-    <Route path="/contests" element={<ContestPage />} />
+    <Route path="/react-app/contests" element={<ContestPage />} />
     
     
   </>

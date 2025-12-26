@@ -11,7 +11,7 @@ const navLinks = [
   { label: "استكشف", href: "#explore" },
   { label: "الأسئلة", href: "#questions" },
   { label: "المبرمج", href: "#coder" },
-  { label: "تسجيل الدخول", to: "/login" },
+  { label: "تسجيل الدخول", to: "/react-app/login" },
 ];
 
 const Login = () => {

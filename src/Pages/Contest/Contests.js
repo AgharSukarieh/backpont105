@@ -99,7 +99,7 @@ const ContestPage = () => {
             ? "bg-blue-100 text-blue-800"
             : "bg-gray-100 text-gray-800"
           }`}
-        onClick={() => navigate(`/ViewContest/${contest.id}`)}
+        onClick={() => navigate(`/react-app/ViewContest/${contest.id}`)}
       >
         <span
           className={`absolute top-4 right-4 px-3 py-1 rounded-full font-semibold text-sm
@@ -151,21 +151,21 @@ const ContestPage = () => {
           {isActive ? (
             <button
               className="w-full py-2 rounded-xl font-semibold bg-white text-green-700 hover:bg-white/90 transition"
-              onClick={() => navigate(`/ViewContest/${contest.id}`)}
+              onClick={() => navigate(`/react-app/ViewContest/${contest.id}`)}
             >
               دخول المسابقة
             </button>
           ) : !isUpcoming ? (
             <button
               className="w-full py-2 rounded-xl font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
-              onClick={() => navigate(`/ViewContest/${contest.id}`)}
+              onClick={() => navigate(`/react-app/ViewContest/${contest.id}`)}
             >
               عرض المسائل
             </button>
           ) : (
             <button
               className="w-full py-2 rounded-xl font-semibold bg-indigo-500 text-white hover:bg-indigo-600 transition"
-              onClick={() => navigate(`/ViewContest/${contest.id}`)}
+              onClick={() => navigate(`/react-app/ViewContest/${contest.id}`)}
             >
               عرض التفاصيل
             </button>

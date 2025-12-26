@@ -136,7 +136,7 @@ const Algorithms = ({ initialExpandedTagId = null }) => {
 
   // الانتقال لصفحة الخوارزمية
   const goToAlgorithm = (algorithmId) => {
-    navigate(`/algorithm/${algorithmId}`);
+    navigate(`/react-app/algorithm/${algorithmId}`);
   };
 
   // تنظيف الـ HTML وأخذ أول 150 حرف

@@ -637,9 +637,9 @@ const AuthCard = ({
                      resolvedRole?.toLowerCase() === "admin";
       
       if (isAdmin) {
-        navigate("/admin/dashboard", { replace: true });
+        navigate("/react-app/admin/dashboard", { replace: true });
       } else {
-        navigate("/dashboard", { replace: true });
+        navigate("/react-app/dashboard", { replace: true });
       }
     } catch (error) {
       console.error("Error verifying login OTP:", error);
@@ -919,9 +919,9 @@ const AuthCard = ({
       
       // توجيه الأدمن إلى صفحة الأدمن، والمستخدمين العاديين إلى dashboard
       if (isAdmin) {
-        navigate("/admin/dashboard", { replace: true });
+        navigate("/react-app/admin/dashboard", { replace: true });
       } else {
-      navigate("/dashboard", { replace: true });
+      navigate("/react-app/dashboard", { replace: true });
       }
     } catch (error) {
       console.error("Login error:", error);

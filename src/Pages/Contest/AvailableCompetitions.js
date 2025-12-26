@@ -163,7 +163,7 @@ export default function AvailableCompetitions({ available}) {
             return (
               <Card
                 key={item.id}
-                onClick={() => navigate(`/ViewContest/${item.id}`)}
+                onClick={() => navigate(`/react-app/ViewContest/${item.id}`)}
                 sx={{
                   borderRadius: 3,
                   overflow: "hidden",

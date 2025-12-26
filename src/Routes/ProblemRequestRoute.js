@@ -12,7 +12,7 @@ export const ProblemRequestRoutes = (
   <>
   
     <Route
-      path="/addProblemProposal"
+      path="/react-app/addProblemProposal"
       element={
         <PrivateRoute>
           <AddProblemProposal />
@@ -21,7 +21,7 @@ export const ProblemRequestRoutes = (
     />
   
     <Route
-      path="/UpdateProblemProposals"
+      path="/react-app/UpdateProblemProposals"
       element={
         <PrivateRoute>
           <UpdateProblemRequest />
@@ -31,7 +31,7 @@ export const ProblemRequestRoutes = (
     
   
     <Route
-      path="/AllProblemProposals"
+      path="/react-app/AllProblemProposals"
       element={
         <PrivateRoute>
           <AllProblemProposals />
@@ -42,7 +42,7 @@ export const ProblemRequestRoutes = (
     
   
     <Route
-      path="/ViewProblemRequest"
+      path="/react-app/ViewProblemRequest"
       element={
         <PrivateRoute>
           <ViewProblemRequest />

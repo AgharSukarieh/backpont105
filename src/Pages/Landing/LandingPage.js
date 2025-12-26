@@ -51,7 +51,7 @@ const navLinks = [
   { label: "استكشف", href: "#explore" },
   { label: "الأسئلة", href: "#questions" },
   { label: "المبرمج", href: "#coder" },
-  { label: "تسجيل الدخول", href: "/login", navigate: true },
+  { label: "تسجيل الدخول", href: "/react-app/login", navigate: true },
 ];
 
 const footerLinks = [
@@ -97,13 +97,13 @@ const LandingPage = () => {
               تحضير كامل لسوق العمل التقني.
             </p>
             <div className="landing-hero__actions">
-              <button type="button" onClick={() => navigate("/signup")}>
+              <button type="button" onClick={() => navigate("/react-app/signup")}>
                 إنشاء حساب
               </button>
               {/* <button
                 type="button"
                 className="landing-hero__secondary"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/react-app/login")}
               >
                 تسجيل الدخول
               </button> */}
@@ -712,7 +712,7 @@ const LandingPage = () => {
                 <button 
                   type="button" 
                   className="discover-cta"
-                  onClick={() => navigate("/dashboard", { state: { activeTab: "algorithms" } })}
+                  onClick={() => navigate("/react-app/dashboard", { state: { activeTab: "algorithms" } })}
                 >
                   اكتشف الآن
                 </button>

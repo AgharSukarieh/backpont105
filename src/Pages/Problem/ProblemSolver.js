@@ -208,7 +208,7 @@ int main() {
         verdict: "الرجاء تسجيل الدخول أولاً"
       });
       setTimeout(() => {
-        navigate('/login');
+        navigate('/react-app/login');
       }, 2000);
       return;
     }
@@ -261,7 +261,7 @@ int main() {
       if (err.response?.status === 401) {
         errorMessage = "انتهت صلاحية الجلسة. الرجاء تسجيل الدخول مرة أخرى";
         setTimeout(() => {
-          navigate('/login');
+          navigate('/react-app/login');
         }, 2000);
       } else if (err.response?.status === 400) {
         errorMessage = err.response?.data?.message || "البيانات المرسلة غير صحيحة";
@@ -541,7 +541,7 @@ int main() {
               if (location.state?.fromContest && location.state?.contestId) {
                 navigate(`/ViewContest/${location.state.contestId}`);
               } else {
-                navigate('/dashboard', { state: { activeTab: 'questions' } });
+                navigate('/react-app/dashboard', { state: { activeTab: 'questions' } });
               }
             }} 
             className="solver-btn"
@@ -564,7 +564,7 @@ int main() {
               if (location.state?.fromContest && location.state?.contestId) {
                 navigate(`/ViewContest/${location.state.contestId}`);
               } else {
-                navigate('/dashboard', { state: { activeTab: 'questions' } });
+                navigate('/react-app/dashboard', { state: { activeTab: 'questions' } });
               }
             }}
             className="solver-back-btn"

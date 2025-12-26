@@ -676,14 +676,14 @@ const UserProfile = () => {
   // Handle profile view
   const handleProfileView = () => {
     setProfileMenuOpen(false);
-    navigate("/dashboard", { state: { openProfile: true } });
+    navigate("/react-app/dashboard", { state: { openProfile: true } });
   };
 
   // Handle logout
   const handleLogout = () => {
     setProfileMenuOpen(false);
     dispatch(clearCredentials());
-    navigate("/login", { replace: true });
+    navigate("/react-app/login", { replace: true });
   };
 
   // Get user avatar and name for header

@@ -58,11 +58,11 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/dashboard" element={<DashboardHome />} />
+        <Route path="/react-app/login" element={<Login />} />
+        <Route path="/react-app/signup" element={<Signup />} />
+        <Route path="/react-app/dashboard" element={<DashboardHome />} />
         <Route 
-          path="/admin/dashboard" 
+          path="/react-app/admin/dashboard" 
           element={
             <AdminRoute>
               <ThemeProvider>
@@ -146,7 +146,7 @@ function App() {
           } 
         />
         
-        <Route path="/algorithm/:id" element={<AlgorithmDetail />} />
+        <Route path="/react-app/algorithm/:id" element={<AlgorithmDetail />} />
 
         {ContestRoutes}
         {ProblemRoutes} 

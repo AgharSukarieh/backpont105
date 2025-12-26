@@ -211,7 +211,7 @@ const AddProblemProposal = () => {
       }).then(() => {
         // إعادة تعيين الحقول
         resetForm();
-        navigate("/dashboard?tab=influencer");
+        navigate("/react-app/dashboard?tab=influencer");
       });
     } catch (error) {
       console.error("❌ Error submitting problem request:", error);

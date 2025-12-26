@@ -104,7 +104,7 @@ const ProblemsList = () => {
   const handlePrev = () => page > 1 && setPage((prev) => prev - 1);
 
   const goToProblem = (problemId) => {
-    navigate(`/problem/${problemId}`);
+    navigate(`/react-app/problem/${problemId}`);
   };
 
   const getDifficultyLabel = (difficulty) => {
@@ -275,7 +275,7 @@ const ProblemsList = () => {
                 <tr
                   key={problem.id}
                   className="problems-row"
-                  onClick={() => navigate(`/problem/${problem.id}`)}
+                  onClick={() => navigate(`/react-app/problem/${problem.id}`)}
                 >
                   <td className="problems-title-cell">
                     <span className="problems-id">#{problem.id}</span>

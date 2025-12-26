@@ -204,7 +204,7 @@ export default function PastCompetitions({past}) {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.12)"
                   }
                 }}
-                onClick={() => navigate(`/ViewContest/${c.id}`)}
+                onClick={() => navigate(`/react-app/ViewContest/${c.id}`)}
               >
                 {/* الصورة */}
                 <CardMedia
@@ -308,7 +308,7 @@ export default function PastCompetitions({past}) {
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/ViewContest/${c.id}`);
+                      navigate(`/react-app/ViewContest/${c.id}`);
                     }}
                   >
                     عرض التفاصيل
@@ -443,7 +443,7 @@ export default function PastCompetitions({past}) {
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/ViewContest/${item.id}`);
+                      navigate(`/react-app/ViewContest/${item.id}`);
                     }}
                   >
                     عرض التفاصيل
