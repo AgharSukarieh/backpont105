@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import api from "../../../Service/api";
+import { getPostWithComments } from "../../../Service/commentService";
+import { likePost, unlikePost, getPostLikes } from "../../../Service/likeService";
 
 /**
  * InlineEditor - local editor component to avoid parent re-renders stealing focus.
@@ -77,6 +79,7 @@ const PostDetails = () => {
   const [pending, setPending] = useState(false);
 
   const [playingVideos, setPlayingVideos] = useState({}); // { [videoId]: true }
+  const [showFullContent, setShowFullContent] = useState(false); // For "المزيد" button
 
   // replies state: { [parentCommentId]: { loading, error, items: [], open } }
   const [replies, setReplies] = useState({});
@@ -86,8 +89,8 @@ const PostDetails = () => {
   const [replySending, setReplySending] = useState({});
   const [replyError, setReplyError] = useState({});
 
-  // top-level add comment form state
-  const [showAddTopForm, setShowAddTopForm] = useState(false);
+  // top-level add comment form state - Always open
+  const [showAddTopForm, setShowAddTopForm] = useState(true);
   const [topInput, setTopInput] = useState("");
   const [topSending, setTopSending] = useState(false);
   const [topError, setTopError] = useState(null);
@@ -108,6 +111,8 @@ const PostDetails = () => {
 
   // image lightbox state
   const [imageModal, setImageModal] = useState({ open: false, index: 0 });
+  // current image index for carousel (when multiple images)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // refs to keep focus and caret position stable for reply textareas
   const replyRefs = useRef({}); // { [parentId]: HTMLElement }
@@ -129,12 +134,21 @@ const PostDetails = () => {
 
   const fetchPost = async () => {
     setLoading(true);
+    // إعادة تعيين فهرس الصورة عند جلب منشور جديد
+    setCurrentImageIndex(0);
     try {
-      const res = await api.get(`/Post/GetById/${id}`);
-      const p = res.data;
+      const p = await getPostWithComments(id);
       const numberLike = Number(p.numberLike ?? 0);
+      
+      // Ensure numberComment is set correctly
+      const commentCount = p.numberComment !== undefined && p.numberComment !== null 
+        ? p.numberComment 
+        : (Array.isArray(p.comments) ? p.comments.length : 0);
 
-      setPost(p);
+      setPost({
+        ...p,
+        numberComment: commentCount,
+      });
       setLikeState({
         count: numberLike,
         isLiked: isLikedFromApi(p.isLikedIt),
@@ -152,6 +166,19 @@ const PostDetails = () => {
     fetchPost();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // تشغيل الفيديو تلقائياً عند تحميل الصفحة إذا كان هناك فيديو
+  useEffect(() => {
+    if (post && post.videos && post.videos.length > 0) {
+      // تشغيل أول فيديو تلقائياً
+      const firstVideo = post.videos[0];
+      const videoId = firstVideo?.id || firstVideo?.url;
+      if (videoId) {
+        console.log(`🎬 Auto-playing video ${videoId}`);
+        setPlayingVideos((p) => ({ ...p, [videoId]: true }));
+      }
+    }
+  }, [post]);
 
   const toggleLike = async () => {
     if (pending) return;
@@ -183,16 +210,28 @@ const PostDetails = () => {
 
     try {
       if (willBeLiked) {
-        await api.post("/PostLike/Add", null, {
-          params: { postID: Number(id), UserId: Number(userId) },
-        });
+        await likePost(Number(id));
       } else {
-        await api.delete("/PostLike/Remove", {
-          params: { postID: Number(id), UserId: Number(userId) },
-        });
+        await unlikePost(Number(id));
       }
 
-      await fetchPost();
+      // Refresh like count from API
+      const likedUsersList = await getPostLikes(Number(id));
+      const serverNumberLike = likedUsersList?.length ?? newCount;
+      
+      setLikeState({
+        count: serverNumberLike,
+        isLiked: willBeLiked,
+      });
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              numberLike: serverNumberLike,
+              isLikedIt: willBeLiked ? 0 : null,
+            }
+          : prev
+      );
     } catch (err) {
       console.error("Like API error:", err?.response ?? err);
       setLikeState(prevLikeState);
@@ -469,17 +508,21 @@ const PostDetails = () => {
       if (created && created.id) {
         // replace in replies
         replaceCommentInReplies(tempId, () => ({ ...created }));
-        // replace in post.comments (top-level) if exists
+        // replace in post.comments (top-level) if exists and update count
         setPost((p) => {
           if (!p) return p;
+          const updatedComments = (p.comments || []).map((c) => (c.id === tempId ? created : c));
           return {
             ...p,
-            comments: (p.comments || []).map((c) => (c.id === tempId ? created : c)),
+            comments: updatedComments,
+            numberComment: updatedComments.length,
           };
         });
       } else {
         // server did not return created object -> re-fetch replies for parent to be safe
         await fetchRepliesForParent(parentId);
+        // Also re-fetch post to get accurate comment count
+        await fetchPost();
       }
 
       // mark parent hasChild in post.comments
@@ -563,23 +606,36 @@ const PostDetails = () => {
       parentCommentId: payload.parentCommentId,
     };
 
-    // append optimistic to post.comments
-    setPost((p) => (p ? { ...p, comments: [...(p.comments || []), optimistic] } : p));
+    // append optimistic to post.comments and update count
+    setPost((p) => {
+      if (!p) return p;
+      const updatedComments = [...(p.comments || []), optimistic];
+      return { 
+        ...p, 
+        comments: updatedComments,
+        numberComment: updatedComments.length,
+      };
+    });
     setTopInput("");
-    setShowAddTopForm(false);
+    // Keep form open - don't close it
 
     try {
       const res = await api.post("/Comment/Add", payload);
       const created = res?.data;
 
       if (created && created.id) {
-        // replace temp in post.comments
+        // replace temp in post.comments and update count
         setPost((p) => {
           if (!p) return p;
-          return { ...p, comments: (p.comments || []).map((c) => (c.id === tempId ? created : c)) };
+          const updatedComments = (p.comments || []).map((c) => (c.id === tempId ? created : c));
+          return { 
+            ...p, 
+            comments: updatedComments,
+            numberComment: updatedComments.length,
+          };
         });
       } else {
-        // fallback: re-fetch
+        // fallback: re-fetch to get accurate count
         await fetchPost();
       }
     } catch (err) {
@@ -657,7 +713,15 @@ const PostDetails = () => {
 
     // optimistic remove from UI
     removeCommentFromReplies(comment.id);
-    setPost((p) => (p ? { ...p, comments: removeCommentFromPost(p.comments ?? [], comment.id) } : p));
+    setPost((p) => {
+      if (!p) return p;
+      const updatedComments = removeCommentFromPost(p.comments ?? [], comment.id);
+      return { 
+        ...p, 
+        comments: updatedComments,
+        numberComment: updatedComments.length,
+      };
+    });
 
     try {
       // call delete endpoint: DELETE /Comment/Remove?id=<id>
@@ -696,9 +760,8 @@ const PostDetails = () => {
     setLikesError(null);
     try {
       const postID = Number(post?.id ?? id);
-      const res = await api.get("/PostLike/GetUserLikedPost", { params: { postID } });
-      const items = Array.isArray(res.data) ? res.data : [];
-      setLikes(items);
+      const items = await getPostLikes(postID);
+      setLikes(Array.isArray(items) ? items : []);
     } catch (err) {
       console.error("Failed to fetch likes list:", err?.response ?? err);
       setLikesError("فشل جلب قائمة المعجبين.");
@@ -757,6 +820,409 @@ const PostDetails = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageModal.open, post]);
 
+  // Render media grid - Facebook style
+  const renderMediaGrid = (post) => {
+    const images = post.images ?? [];
+    const videos = post.videos ?? [];
+    const media = [];
+
+    images.forEach((url) => media.push({ type: "image", src: url }));
+    videos.forEach((v) => media.push({ 
+      type: "video", 
+      src: v.url, 
+      thumb: v.thumbnailUrl || v.thumbnail || null,
+      videoId: v.id || v.url // استخدام id الفيديو أو url كمعرف
+    }));
+
+    const total = media.length;
+    if (total === 0) return null;
+
+    // إذا كان هناك أكثر من صورة، اعرض صورة واحدة مع أسهم للتنقل
+    if (total > 1) {
+      const currentMedia = media[currentImageIndex];
+      const canGoPrev = currentImageIndex > 0;
+      const canGoNext = currentImageIndex < total - 1;
+
+      const handlePrev = (e) => {
+        e.stopPropagation();
+        if (canGoPrev) {
+          setCurrentImageIndex(prev => prev - 1);
+        }
+      };
+
+      const handleNext = (e) => {
+        e.stopPropagation();
+        if (canGoNext) {
+          setCurrentImageIndex(prev => prev + 1);
+        }
+      };
+
+      return (
+        <div className="relative w-full h-full flex items-center justify-center">
+          {/* Current Image */}
+          <div className="w-full h-full flex items-center justify-center">
+            {currentMedia.type === "image" ? (
+              <img 
+                src={currentMedia.src} 
+                alt={`post-${post.id}-img-${currentImageIndex}`} 
+                loading="lazy" 
+                className="w-full h-full object-contain cursor-pointer hover:opacity-95 transition" 
+                onClick={() => openImageModal(currentImageIndex)}
+                onError={(e) => (e.currentTarget.style.display = "none")} 
+              />
+            ) : currentMedia.type === "video" ? (
+              playingVideos[currentMedia.videoId] ? (
+                <video 
+                  src={currentMedia.src} 
+                  controls 
+                  autoPlay 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    console.error("Video error:", e);
+                    e.currentTarget.style.display = "none";
+                  }}
+                >
+                  متصفحك لا يدعم تشغيل الفيديو.
+                </video>
+              ) : (
+                <div className="relative w-full h-full" onClick={() => playVideo(currentMedia.videoId)}>
+                  {currentMedia.thumb ? (
+                    <>
+                      <img 
+                        src={currentMedia.thumb} 
+                        alt={`video-thumb-${post.id}`} 
+                        loading="lazy" 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => (e.currentTarget.style.display = "none")} 
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer">
+                        <div className="bg-black/50 rounded-full p-4 hover:bg-black/70 transition">
+                          <svg className="w-12 h-12 text-white" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white bg-black cursor-pointer">
+                      <div className="bg-black/50 rounded-full p-4">
+                        <svg className="w-12 h-12 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white bg-black">▶</div>
+            )}
+          </div>
+
+          {/* Previous Arrow */}
+          {canGoPrev && (
+            <button
+              onClick={handlePrev}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white rounded-full p-3 transition-all duration-200 flex items-center justify-center shadow-lg"
+              aria-label="الصورة السابقة"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+
+          {/* Next Arrow */}
+          {canGoNext && (
+            <button
+              onClick={handleNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white rounded-full p-3 transition-all duration-200 flex items-center justify-center shadow-lg"
+              aria-label="الصورة التالية"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+
+          {/* Image Counter */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium">
+            {currentImageIndex + 1} / {total}
+          </div>
+        </div>
+      );
+    }
+
+    // إذا كان هناك صورة واحدة فقط
+    if (total === 1) {
+      const m = media[0];
+      return (
+        <div className="mt-4">
+          <div className="w-full overflow-hidden rounded-2xl bg-slate-100 shadow-md">
+            {m.type === "image" ? (
+              <img 
+                src={m.src} 
+                alt={post.title ? `${post.title} media` : `post-${post.id}-media-0`} 
+                loading="lazy" 
+                className="w-full max-h-[600px] object-contain cursor-pointer hover:opacity-95 transition" 
+                onClick={() => openImageModal(0)}
+                onError={(e) => (e.currentTarget.style.display = "none")} 
+              />
+            ) : m.type === "video" ? (
+              playingVideos[m.videoId] ? (
+                <video 
+                  src={m.src} 
+                  controls 
+                  autoPlay 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    console.error("Video error:", e);
+                    e.currentTarget.style.display = "none";
+                  }}
+                >
+                  متصفحك لا يدعم تشغيل الفيديو.
+                </video>
+              ) : (
+                <div className="relative w-full aspect-video bg-black" onClick={() => playVideo(m.videoId)}>
+                  {m.thumb ? (
+                    <>
+                      <img 
+                        src={m.thumb} 
+                        alt={`video-thumb-${post.id}`} 
+                        loading="lazy" 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => (e.currentTarget.style.display = "none")} 
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer">
+                        <div className="bg-black/50 rounded-full p-4 hover:bg-black/70 transition">
+                          <svg className="w-12 h-12 text-white" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white cursor-pointer">
+                      <div className="bg-black/50 rounded-full p-4">
+                        <svg className="w-12 h-12 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            ) : (
+              <div className="w-full aspect-video flex items-center justify-center text-white bg-black">▶</div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // الكود القديم للـ grid (لن يتم استخدامه بعد الآن)
+    if (total === 2) {
+      return (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {media.slice(0, 2).map((m, i) => (
+            <div key={i} className="aspect-square overflow-hidden rounded-2xl shadow-sm">
+              {m.type === "image" ? (
+                <img 
+                  src={m.src} 
+                  alt={`post-${post.id}-img-${i}`} 
+                  loading="lazy" 
+                  className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition" 
+                  onClick={() => openImageModal(i)}
+                  onError={(e) => (e.currentTarget.style.display = "none")} 
+                />
+              ) : m.thumb ? (
+                <div className="relative w-full h-full">
+                  <img 
+                    src={m.thumb} 
+                    alt={`video-thumb-${i}`} 
+                    loading="lazy" 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => (e.currentTarget.style.display = "none")} 
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div className="bg-black/50 rounded-full p-2">
+                      <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (total === 3) {
+      return (
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="col-span-2 aspect-square overflow-hidden rounded-2xl shadow-sm">
+            {media[0].type === "image" ? (
+              <img 
+                src={media[0].src} 
+                alt={`post-${post.id}-img-0`} 
+                className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition" 
+                loading="lazy" 
+                onClick={() => openImageModal(0)}
+                onError={(e) => (e.currentTarget.style.display = "none")} 
+              />
+            ) : media[0].thumb ? (
+              <div className="relative w-full h-full">
+                <img 
+                  src={media[0].thumb} 
+                  alt="video-thumb" 
+                  className="w-full h-full object-cover" 
+                  loading="lazy" 
+                  onError={(e) => (e.currentTarget.style.display = "none")} 
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <div className="bg-black/50 rounded-full p-2">
+                    <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            {media.slice(1, 3).map((m, i) => (
+              <div key={i} className="aspect-square overflow-hidden rounded-2xl shadow-sm">
+                {m.type === "image" ? (
+                  <img 
+                    src={m.src} 
+                    alt={`post-${post.id}-img-${i + 1}`} 
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition" 
+                    loading="lazy" 
+                    onClick={() => openImageModal(i + 1)}
+                    onError={(e) => (e.currentTarget.style.display = "none")} 
+                  />
+                ) : m.thumb ? (
+                  <div className="relative w-full h-full">
+                    <img 
+                      src={m.thumb} 
+                      alt="video-thumb" 
+                      className="w-full h-full object-cover" 
+                      loading="lazy" 
+                      onError={(e) => (e.currentTarget.style.display = "none")} 
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <div className="bg-black/50 rounded-full p-1.5">
+                        <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (total === 4) {
+      return (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {media.slice(0, 4).map((m, i) => (
+            <div key={i} className="aspect-square overflow-hidden rounded-2xl shadow-sm">
+              {m.type === "image" ? (
+                <img 
+                  src={m.src} 
+                  alt={`post-${post.id}-img-${i}`} 
+                  className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition" 
+                  loading="lazy" 
+                  onClick={() => openImageModal(i)}
+                  onError={(e) => (e.currentTarget.style.display = "none")} 
+                />
+              ) : m.thumb ? (
+                <div className="relative w-full h-full">
+                  <img 
+                    src={m.thumb} 
+                    alt="video-thumb" 
+                    className="w-full h-full object-cover" 
+                    loading="lazy" 
+                    onError={(e) => (e.currentTarget.style.display = "none")} 
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div className="bg-black/50 rounded-full p-1.5">
+                      <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    const showCount = Math.min(4, total);
+    return (
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {media.slice(0, showCount).map((m, i) => {
+          const isLast = i === showCount - 1;
+          const remaining = total - showCount;
+          return (
+            <div key={i} className="relative aspect-square overflow-hidden rounded-2xl shadow-sm">
+              {m.type === "image" ? (
+                <img 
+                  src={m.src} 
+                  alt={`post-${post.id}-img-${i}`} 
+                  className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition" 
+                  loading="lazy" 
+                  onClick={() => openImageModal(i)}
+                  onError={(e) => (e.currentTarget.style.display = "none")} 
+                />
+              ) : m.thumb ? (
+                <div className="relative w-full h-full">
+                  <img 
+                    src={m.thumb} 
+                    alt="video-thumb" 
+                    className="w-full h-full object-cover" 
+                    loading="lazy" 
+                    onError={(e) => (e.currentTarget.style.display = "none")} 
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div className="bg-black/50 rounded-full p-1.5">
+                      <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+              )}
+              {isLast && remaining > 0 && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-2xl font-semibold cursor-pointer">
+                  +{remaining}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (loading)
     return (
       <div className="flex items-center justify-center h-48 text-gray-500">
@@ -781,6 +1247,15 @@ const PostDetails = () => {
 
   const safeContentHtml = sanitizeHtml(post.content ?? "");
   const postImageUrls = getPostImageUrls();
+  
+  // Get plain text length for "المزيد" button logic (strip HTML tags)
+  const getPlainTextLength = (html) => {
+    if (!html) return 0;
+    // Remove HTML tags and get text length
+    const text = html.replace(/<[^>]*>/g, '').trim();
+    return text.length;
+  };
+  const contentLength = getPlainTextLength(post.content);
 
   // Render single comment (recursive)
   const CommentItem = ({ comment, level = 0 }) => {
@@ -973,247 +1448,180 @@ const PostDetails = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
-      <button
-        onClick={() => navigate(-1)}
-        className="text-sm text-gray-600 hover:text-gray-800 mb-4"
-      >
-        ← رجوع
-      </button>
+    <div className="min-h-screen bg-black">
+      {/* Main Content - Split Layout */}
+      <div className="flex h-screen overflow-hidden">
+        {/* Left Side - Post Image (Takes remaining space) */}
+        <div className="flex-1 relative bg-black overflow-hidden">
+          <article className="h-full relative">
+            {/* Post Header - Overlay on Image */}
+            <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent p-6">
+              <div className="flex items-center justify-between gap-4">
+                {/* Left Side: X Button, Avatar, Name */}
+                <div className="flex items-center gap-4">
+                  {/* Close Button */}
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 transition text-white backdrop-blur-sm flex-shrink-0"
+                    aria-label="إغلاق"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
 
-      <article className="bg-white border border-gray-100 rounded-xl shadow-sm p-5">
-        <header className="flex items-center gap-4">
-          <div onClick={()=>{
-            const currentUserId = localStorage.getItem("idUser");
-            if (currentUserId) {
-              navigate(`/Profile/${currentUserId}`);
-            }
-          }} className="w-14 h-14 cursor-pointer relative flex-shrink-0">
-            {post.imageURL ? (
-              <img
-                src={post.imageURL}
-                alt={post.userName || "user"}
-                className="w-14 h-14 rounded-full object-cover shadow-sm"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center font-semibold text-sm">
-                {post.userName
-                  ?.split(" ")
-                  .map((s) => s[0])
-                  .slice(0, 2)
-                  .join("") || ""}
+                  {/* Avatar */}
+                  <div 
+                    onClick={() => {
+                      if (post.userId) {
+                        navigate(`/Profile/${post.userId}`);
+                      }
+                    }}
+                    className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition border-2 border-white"
+                  >
+                    {post.imageURL ? (
+                      <img
+                        src={post.imageURL}
+                        alt={post.userName || "user"}
+                        className="w-12 h-12 object-cover rounded-full"
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold">
+                        {post.userName
+                          ?.split(" ")
+                          .map((s) => s[0])
+                          .slice(0, 2)
+                          .join("") || "U"}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Name and Date */}
+                  <div className="text-right">
+                    <div 
+                      onClick={() => {
+                        if (post.userId) {
+                          navigate(`/Profile/${post.userId}`);
+                        }
+                      }}
+                      className="text-base font-semibold text-white cursor-pointer hover:underline mb-1"
+                    >
+                      {post.userName || "Unknown"}
+                    </div>
+                    <div className="text-xs text-white/80">{formatDate(post.createdAt)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          {/* Media Grid - Takes Full Height */}
+          <div className="h-full flex items-center justify-center">
+            {renderMediaGrid(post) || (
+              <div className="text-white text-center p-8">
+                <p className="text-lg">لا توجد صور أو فيديوهات</p>
               </div>
             )}
           </div>
 
-          <div className="flex-1 relative" style={{ paddingLeft: 56 }}>
-            <div
-              className="text-xs text-gray-400"
-              style={{ position: "absolute", left: 0, top: 0, whiteSpace: "nowrap" }}
-            >
-              <div>{formatDate(post.createdAt)}</div>
-              {/* show Views (property name from API is "Views") */}
-              <div className="text-xs text-gray-400 mt-1">{(post.Views ?? post.views ?? 0)} مشاهدات</div>
-            </div>
-            <div onClick={()=>{
-              const currentUserId = localStorage.getItem("idUser");
-              if (currentUserId) {
-                navigate(`/Profile/${currentUserId}`);
-              }
-            }} className="text-sm cursor-pointer font-medium text-gray-900 text-right pr-12">{post.userName || "Unknown"}</div>
-          </div>
-        </header>
-
-        <div className="mt-4">
-          {post.title && (
-            <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              {post.title}
-            </h1>
-          )}
-
-          <div
-            className="text-gray-700 whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: safeContentHtml }}
-          />
-        </div>
-
-        {post.images?.length > 0 && (
-          <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 mt-4">
-            {post.images.map((img, idx) => {
-              // compute src robustly (could be string or object)
-              const src = typeof img === "string" ? img : img.url || img.image || img.src || "";
-              return (
-                <img
-                  key={idx}
-                  src={src}
-                  alt={`post-${post.id}-img-${idx}`}
-                  loading="lazy"
-                  className="w-full h-48 object-cover rounded-md cursor-pointer"
-                  onClick={() => openImageModal(idx)}
-                  onError={(e) => (e.currentTarget.style.display = "none")}
-                />
-              );
-            })}
-          </div>
-        )}
-
-        {post.videos?.length > 0 && (
-          <div className="space-y-4 mt-4">
-            {post.videos.map((v, idx) => {
-              const vidId = v.id ?? `video-${idx}`;
-              const isPlaying = !!playingVideos[vidId];
-              const thumb = v.thumbnailUrl || v.thumbnail || "";
-              return (
-                <div key={vidId} className="relative">
-                  {isPlaying ? (
-                    <video
-                      controls
-                      autoPlay
-                      poster={thumb || undefined}
-                      className="w-full rounded-md bg-black"
-                    >
-                      <source src={v.url} />
-                      متصفحك لا يدعم عرض الفيديو.
-                    </video>
-                  ) : (
+          {/* Post Content - Overlay at Bottom */}
+          {(post.title || post.content) && (
+            <div className="absolute bottom-20 left-0 right-0 z-10 bg-gradient-to-t from-black/80 via-black/60 to-transparent backdrop-blur-sm p-6 text-right" dir="rtl">
+              {post.title && (
+                <h1 className="text-xl font-bold text-white mb-2 text-right drop-shadow-lg" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                  {post.title}
+                </h1>
+              )}
+              {post.content && (
+                <div className="text-right" dir="rtl">
+                  <div
+                    className={`text-white/90 text-sm leading-relaxed ${showFullContent ? '' : 'line-clamp-3'} drop-shadow-md`}
+                    style={{ textShadow: '0 1px 4px rgba(0,0,0,0.4)', textAlign: 'right', direction: 'rtl' }}
+                    dangerouslySetInnerHTML={{ __html: safeContentHtml }}
+                  />
+                  {contentLength > 200 && (
                     <button
-                      onClick={() => playVideo(vidId)}
-                      className="w-full rounded-md overflow-hidden relative focus:outline-none"
-                      aria-label="Play video"
+                      onClick={() => setShowFullContent(!showFullContent)}
+                      className="mt-2 text-white/90 hover:text-white text-sm font-medium underline drop-shadow-sm"
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
                     >
-                      {thumb ? (
-                        <img
-                          src={thumb}
-                          alt={v.title || `video-${vidId}`}
-                          loading="lazy"
-                          className="w-full h-56 object-cover rounded-md"
-                          onError={(e) => (e.currentTarget.style.display = "none")}
-                        />
-                      ) : (
-                        <div className="w-full h-56 bg-black/70 rounded-md flex items-center justify-center text-white">
-                          ▶
-                        </div>
-                      )}
-
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="bg-black/40 rounded-full p-3">
-                          <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </div>
-                      </div>
+                      {showFullContent ? 'عرض أقل' : 'المزيد'}
                     </button>
                   )}
-
-                  {v.title && <div className="mt-2 text-sm font-medium text-gray-800">{v.title}</div>}
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {post.postTags?.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {post.postTags.map((t) => (
-              <span
-                key={t.id}
-                onClick={()=>navigate(`/react-app/Algorithms/${t.id}`)}
-                className="text-xs cursor-pointer bg-sky-50 text-sky-700 px-2 py-1 rounded-full border border-sky-100"
-              >
-                #{t.tagName}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <footer className="mt-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleLike}
-              disabled={pending}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold transition ${
-                likeState.isLiked
-                  ? "bg-gradient-to-r from-pink-100 to-orange-100 text-pink-600 shadow-sm"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              } ${pending ? "opacity-60 cursor-not-allowed" : ""}`}
-              aria-pressed={likeState.isLiked}
-            >
-              <span className="text-lg">{likeState.isLiked ? "♥" : "♡"}</span>
-              <span>{likeState.count}</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-gray-500">
-              {post.numberLike ?? 0} إعجاب • {(post.Views ?? post.views ?? 0)} مشاهدة
+              )}
             </div>
+          )}
 
-            {/* Button to open likes modal */}
-            <button
-              onClick={openLikesModal}
-              className="px-3 py-1 text-sm rounded-md bg-white border border-gray-200 hover:bg-gray-50"
-            >
-              عرض المعجبين
-            </button>
-          </div>
-        </footer>
-      </article>
+          {/* Tags - Overlay */}
+          {post.postTags?.length > 0 && (
+            <div className="absolute bottom-32 left-6 flex flex-wrap gap-2 z-10">
+              {post.postTags.map((t) => (
+                <span
+                  key={t.id}
+                  onClick={() => navigate(`/react-app/Algorithms/${t.id}`)}
+                  className="text-xs cursor-pointer bg-white/90 text-gray-800 px-3 py-1 rounded-full border border-white/50 hover:bg-white transition"
+                >
+                  #{t.tagName}
+                </span>
+              ))}
+            </div>
+          )}
 
-      <section className="mt-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold">التعليقات</h3>
-
-          {/* Top-level add button */}
-          <div>
-            <button
-              onClick={() => setShowAddTopForm((s) => !s)}
-              className="px-3 py-1 text-sm rounded-md bg-sky-600 text-white hover:bg-sky-700"
-            >
-              إضافة تعليق
-            </button>
-          </div>
+          </article>
         </div>
 
-        {showAddTopForm && (
-          <div className="mb-4">
+        {/* Right Side - Comments Section */}
+        <section id="comments-section" className="w-96 border-l border-gray-200 bg-white overflow-y-auto flex flex-col">
+          {/* Comments Header - Sticky */}
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 text-right">
+              التعليقات ({post.numberComment !== undefined && post.numberComment !== null ? post.numberComment : (Array.isArray(post.comments) ? post.comments.length : 0)})
+            </h3>
+          </div>
+
+          {/* Comments List */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {(!post.comments || post.comments.length === 0) && (
+              <p className="text-center text-gray-500 py-8">لا توجد تعليقات بعد.</p>
+            )}
+
+            <div className="space-y-4">
+              {(post.comments ?? []).map((c) => (
+                <CommentItem key={c.id} comment={c} level={0} />
+              ))}
+            </div>
+          </div>
+
+          {/* Comment Form - Always Open */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
             <textarea
               value={topInput}
               onChange={(e) => setTopInput(e.target.value)}
-              rows={4}
-              className="w-full p-2 border rounded-md text-sm mb-2"
+              rows={3}
+              className="w-full p-3 border border-gray-300 rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="اكتب تعليقك هنا..."
             />
             {topError && <div className="text-xs text-red-500 mb-2">{topError}</div>}
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => { setTopInput(""); setShowAddTopForm(false); }}
-                className="px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200"
+                onClick={() => { setTopInput(""); }}
+                className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-medium"
                 disabled={topSending}
               >
-                إلغاء
+                مسح
               </button>
               <button
                 onClick={submitTopLevelComment}
-                className={`px-3 py-1 rounded-md text-white ${topSending ? "bg-gray-400" : "bg-sky-600 hover:bg-sky-700"}`}
+                className={`px-3 py-1.5 rounded-lg text-white text-sm font-medium ${topSending ? "bg-gray-400" : "bg-indigo-600 hover:bg-indigo-700"}`}
                 disabled={topSending}
               >
-                {topSending ? "جاري الإرسال..." : "إضافة تعليق"}
+                {topSending ? "جاري الإرسال..." : "إرسال"}
               </button>
             </div>
           </div>
-        )}
-
-        {(!post.comments || post.comments.length === 0) && (
-          <p className="text-gray-500">لا توجد تعليقات بعد.</p>
-        )}
-
-        <div className="space-y-4">
-          {(post.comments ?? []).map((c) => (
-            <CommentItem key={c.id} comment={c} level={0} />
-          ))}
-        </div>
-      </section>
+        </section>
+      </div>
 
       {/* Image fullscreen modal / lightbox */}
       {imageModal.open && (

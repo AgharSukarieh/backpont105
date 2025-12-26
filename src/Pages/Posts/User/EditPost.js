@@ -4,6 +4,7 @@ import api from "../../../Service/api";
 import { uploadUserImage } from "../../../Service/userService";
 import { uploadUserVideo } from "../../../Service/UploadVideoService";
 import { getAllTags } from "../../../Service/TagServices";
+import { updatePost } from "../../../Service/postService";
 import { Editor } from "@tinymce/tinymce-react";
 
 const TINYMCE_API_KEY = "ydbgd84essmlucuqp6di1jaz8o8m7murr9yj34z0en3lv9r5";
@@ -264,8 +265,8 @@ const EditPost = () => {
       setOverallMessage("جاري إرسال تحديث البوست إلى الخادم...");
       setSaving(true);
 
-      const body = {
-        id: postId,
+      // استخدام updatePost من postService
+      const updateData = {
         title: title.trim(),
         content: content,
         videos: videos
@@ -281,10 +282,10 @@ const EditPost = () => {
         tags: selectedTags.map((t) => Number(t)).filter(Boolean),
       };
 
-      console.debug("[PUT] body:", body);
-      const res = await api.put("/Post/Update", body);
-      console.debug("[PUT] res:", res?.status, res?.data);
-      setUpdateResponse(res?.data ?? res);
+      console.debug("[PUT] Update data:", updateData);
+      const res = await updatePost(postId, updateData);
+      console.debug("[PUT] Response:", res);
+      setUpdateResponse(res);
       setOverallMessage("تم تحديث البوست بنجاح.");
       setUpdateSuccess(true);
       setSaving(false);

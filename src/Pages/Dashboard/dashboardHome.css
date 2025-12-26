@@ -7,6 +7,20 @@
   direction: rtl;
 }
 
+/* منع تأثير الدارك مود على Dashboard عند تبويب explore */
+.dark-mode .dashboard-home[data-active-tab="explore"],
+.dark-mode .dashboard-home[data-active-tab="explore"] .dashboard-home__main,
+.dark-mode .dashboard-home[data-active-tab="explore"] .dashboard-home__content,
+.dark-mode .dashboard-home[data-active-tab="explore"] .dashboard-home__header {
+  background: #ffffff !important;
+  color: #0f1f2d !important;
+}
+
+.dark-mode .dashboard-home[data-active-tab="explore"] .dashboard-home__header .landing-nav,
+.dark-mode .dashboard-home[data-active-tab="explore"] .dashboard-home__header .landing-nav * {
+  color: #1b2b3a !important;
+}
+
 .dashboard-home__header.landing-header {
   background: #ffffff;
   clip-path: none;
@@ -430,6 +444,26 @@
     inset-inline-start: 50%;
     transform: translateX(-50%);
   }
+}
+
+/* ============================================
+   منع تأثير الدارك مود على صفحة Dashboard عند تبويب explore
+   ============================================ */
+.dark-mode .dashboard-home__content[data-tab="explore"],
+.dark-mode .dashboard-home__content[data-tab="explore"] *,
+.dark-mode .dashboard-home__main[data-active-tab="explore"],
+.dark-mode .dashboard-home__main[data-active-tab="explore"] * {
+  background: inherit !important;
+  color: inherit !important;
+}
+
+/* منع تأثير الدارك مود على PostsPage في تبويب explore */
+.dark-mode .dashboard-home .posts-page,
+.dark-mode .dashboard-home .posts-page *,
+.dark-mode .dashboard-home [class*="post"],
+.dark-mode .dashboard-home [class*="Post"] {
+  background: inherit !important;
+  color: inherit !important;
 }
 
 

@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import * as signalR from "@microsoft/signalr";
+import { getSentMessagesUsers, getMessagesByUser, sendMessage } from "../../../Service/messageService";
+import { uploadImage, uploadVideo } from "../../../Service/uploadService";
+import api from "../../../Service/api";
 
 /*
   نسخة ChatPage مع إضافة Lightbox/modal لعرض الصورة أو الفيديو بالكامل عند النقر.
@@ -70,6 +73,16 @@ export default function ChatPage() {
         --max-width:1200px;
       }
 
+      /* Dark Mode Variables */
+      .dark-mode {
+        --bg: #0f172a;
+        --panel: #1e293b;
+        --muted: #94a3b8;
+        --accent: #667eea;
+        --accent-contrast: #fff;
+        --incoming: #334155;
+      }
+
       /* Page fade in */
       .chat-wrapper { opacity: 0; transform: translateY(6px); transition: opacity 300ms ease, transform 300ms ease; }
       .chat-wrapper.ready { opacity: 1; transform: translateY(0); }
@@ -105,11 +118,16 @@ export default function ChatPage() {
       /* user row layout & preview */
       .user-row { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid #f1f3f5; cursor:pointer; transition: background 160ms, transform 160ms; }
       .user-row:hover { background:#fbfcfe; transform: translateY(-2px); }
+      .dark-mode .user-row { border-bottom-color: rgba(51, 65, 85, 0.8); }
+      .dark-mode .user-row:hover { background: #334155; }
+      .dark-mode .user-row[style*="background: rgb(230, 240, 255)"] { background: rgba(102, 126, 234, 0.2) !important; }
       .user-avatar { width:50px; height:50px; border-radius:50%; overflow:hidden; flex-shrink:0; position:relative; }
       .user-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
       .user-meta { flex:1; min-width:0; }
-      .user-meta .name { font-weight:600; display:flex; align-items:center; gap:8px; }
+      .user-meta .name { font-weight:600; display:flex; align-items:center; gap:8px; color: var(--text-primary, #1a202c); }
       .user-meta .preview { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+      .dark-mode .user-meta .name { color: #f1f5f9; }
+      .dark-mode .user-meta .preview { color: var(--muted); }
 
       .online-dot { position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:green; border-radius:50%; border:2px solid white; }
       .online-dot.small { width:10px; height:10px; bottom:0; right:0; }
@@ -117,8 +135,10 @@ export default function ChatPage() {
       /* header / chat area */
       .chat-panel { flex:3; padding:16px; display:flex; flex-direction:column; }
       .chat-header { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-      .chat-header .title { font-size:18px; font-weight:600; }
+      .chat-header .title { font-size:18px; font-weight:600; color: var(--text-primary, #1a202c); }
       .chat-header .status { font-size:12px; color:var(--muted); }
+      .dark-mode .chat-header .title { color: #f1f5f9; }
+      .dark-mode .chat-header .status { color: var(--muted); }
 
       /* messages window */
       .messages-window { flex:1; background:var(--panel); border-radius:8px; padding:16px; overflow-y:auto; border:1px solid #e2e6ee; }
@@ -126,21 +146,28 @@ export default function ChatPage() {
       .msg-bubble { padding:10px 14px; border-radius:12px; max-width:70%; word-break:break-word; box-shadow: 0 4px 18px rgba(2,6,23,0.04); }
       .msg-in { background:var(--incoming); color:#222; align-self:flex-start; }
       .msg-out { background:var(--accent); color:var(--accent-contrast); align-self:flex-end; }
+      .dark-mode .messages-window { border-color: rgba(51, 65, 85, 0.8); }
+      .dark-mode .msg-in { background: var(--incoming); color: #f1f5f9; }
+      .dark-mode .msg-out { background: var(--accent); color: var(--accent-contrast); }
 
       /* unread message highlight (temporary until read) */
       .msg-unread { box-shadow: 0 8px 28px rgba(11,116,255,0.06); border: 1px solid rgba(11,116,255,0.06); }
 
       /* chat form */
       .chat-form { display:flex; gap:8px; margin-top:12px; align-items:center; }
-      .chat-input { flex:1; padding:10px 12px; border-radius:8px; border:1px solid #e6e9ee; font-size:14px; }
+      .chat-input { flex:1; padding:10px 12px; border-radius:8px; border:1px solid #e6e9ee; font-size:14px; background: var(--panel); color: var(--text-primary, #1a202c); }
       .chat-send { background:var(--accent); color:var(--accent-contrast); border:none; padding:10px 12px; border-radius:8px; cursor:pointer; transition:transform 120ms ease; }
       .chat-send:active { transform: translateY(1px) scale(.997); }
+      .dark-mode .chat-input { background: var(--panel); color: #f1f5f9; border-color: rgba(51, 65, 85, 0.8); }
+      .dark-mode .chat-input::placeholder { color: #94a3b8; }
+      .dark-mode .chat-input:focus { border-color: var(--accent); outline: none; }
 
       /* attachment previews */
       .attachments { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
       .att-thumb { width:72px; height:72px; border-radius:8px; overflow:hidden; position:relative; background:#fafafa; border:1px solid #eee; display:flex; align-items:center; justify-content:center; }
       .att-thumb img, .att-thumb video { width:100%; height:100%; object-fit:cover; display:block; cursor: pointer; }
       .att-remove { position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:white; width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; }
+      .dark-mode .att-thumb { background: #334155; border-color: rgba(51, 65, 85, 0.8); }
 
       /* upload progress small bar */
       .progress-bar { width:100%; height:5px; background:#eee; border-radius:4px; overflow:hidden; margin-top:6px; }
@@ -153,6 +180,7 @@ export default function ChatPage() {
       /* scrollbar */
       .messages-window::-webkit-scrollbar { width: 10px; }
       .messages-window::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.06)); border-radius:999px; }
+      .dark-mode .messages-window::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.08)); }
 
       /* modal / lightbox */
       .media-modal { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.6); z-index: 9999; padding: 20px; }
@@ -178,13 +206,24 @@ export default function ChatPage() {
         overflow:hidden;
         box-shadow:0 6px 18px rgba(15,23,42,0.06);
         background:var(--bg);
+        transition: background-color 0.3s ease, border-color 0.3s ease;
       }
       .chat-users{
         flex:1;
         background:var(--panel);
         overflow-y:auto;
         border-inline-end:1px solid #e6e9ee;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
       }
+      .dark-mode .chat-wrapper { border-color: rgba(51, 65, 85, 0.8); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); }
+      .dark-mode .chat-users { border-inline-end-color: rgba(51, 65, 85, 0.8); }
+      
+      /* Additional dark mode styles */
+      .dark-mode h3 { color: #f1f5f9 !important; }
+      .dark-mode p { color: var(--muted) !important; }
+      .dark-mode .progress-bar { background: rgba(51, 65, 85, 0.5) !important; }
+      .dark-mode .progress-bar > i { background: linear-gradient(90deg, rgba(102, 126, 234, 0.9), rgba(102, 126, 234, 0.6)) !important; }
+      .dark-mode .shimmer { background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 100%) !important; }
     `;
     const styleEl = document.createElement("style");
     styleEl.id = styleId;
@@ -248,12 +287,10 @@ export default function ChatPage() {
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const { data } = await axios.get(
-        "http://arabcodetest.runasp.net/Message/GetAllUserSentMessages",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const data = await getSentMessagesUsers();
+      const dataArray = Array.isArray(data) ? data : [];
 
-      const list = (data || []).map(u => {
+      const list = (dataArray || []).map(u => {
         const unread = u.unreadCount ?? u.unReadCount ?? u.unReadMessages ?? 0;
         const lastMsg = u.lastMessage ?? u.lastMessageText ?? u.lastMessagePreview ?? "";
         const lastTime = u.lastMessageSentAt ?? u.lastMessageTime ?? u.lastMessageDate ?? u.lastSeen ?? u.sentAt ?? null;
@@ -275,6 +312,7 @@ export default function ChatPage() {
       setUsers(list);
     } catch (err) {
       console.error("Failed to fetch users:", err);
+      setUsers([]);
     } finally {
       setLoadingUsers(false);
     }
@@ -285,11 +323,9 @@ export default function ChatPage() {
     setSelectedUser(user);
     setLoadingMessages(true);
     try {
-      const { data } = await axios.get(
-        `http://arabcodetest.runasp.net/Message/GetUserMessage/${user.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setMessages(data || []);
+      const data = await getMessagesByUser(user.id);
+      const messagesArray = Array.isArray(data) ? data : [];
+      setMessages(messagesArray);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 60);
 
       setUnreadMap(prev => {
@@ -300,7 +336,7 @@ export default function ChatPage() {
       });
 
       // Optionally call server mark-as-read here (uncomment and adapt endpoint if available):
-      // try { await axios.post(`http://arabcodetest.runasp.net/Message/MarkAsRead/${user.id}`, null, { headers: { Authorization: `Bearer ${token}` } }); } catch(e){ console.warn(e); }
+      // try { await api.post(`/api/messages/mark-as-read/${user.id}`, null); } catch(e){ console.warn(e); }
     } catch (err) {
       console.error("Failed to fetch messages:", err);
       setMessages([]);
@@ -346,22 +382,10 @@ export default function ChatPage() {
   // upload single image file (matches uploadUserImage behavior)
   const uploadImageFile = async (imageFile) => {
     if (!imageFile) return null;
-    const formData = new FormData();
-    formData.append("image", imageFile);
     try {
-      const res = await axios.post("http://arabcodetest.runasp.net/upload/UploadImage", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: token ? `Bearer ${token}` : undefined,
-        },
-        onUploadProgress: (e) => {
-          const pct = Math.round((e.loaded / Math.max(e.total || 1, 1)) * 100);
-          setUploadProgress(prev => ({ ...prev, [imageFile.name]: pct }));
-        },
-      });
-      // handle string or object return
-      if (!res || !res.data) return null;
-      return typeof res.data === "string" ? res.data : (res.data.url ?? res.data);
+      const result = await uploadImage(imageFile);
+      // uploadImage returns { url, fileName }
+      return result?.url || result;
     } catch (err) {
       console.error("uploadImageFile failed", err);
       return null;
@@ -371,21 +395,10 @@ export default function ChatPage() {
   // upload single video file (matches uploadUserVideo behavior)
   const uploadVideoFile = async (videoFile) => {
     if (!videoFile) return null;
-    const formData = new FormData();
-    formData.append("video", videoFile);
     try {
-      const res = await axios.post("http://arabcodetest.runasp.net/upload/UploadVideo", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: token ? `Bearer ${token}` : undefined,
-        },
-        onUploadProgress: (e) => {
-          const pct = Math.round((e.loaded / Math.max(e.total || 1, 1)) * 100);
-          setUploadProgress(prev => ({ ...prev, [videoFile.name]: pct }));
-        },
-      });
-      if (!res || !res.data) return null;
-      return typeof res.data === "string" ? res.data : (res.data.url ?? res.data);
+      const result = await uploadVideo(videoFile);
+      // uploadVideo returns { url, thumbnailUrl, fileName }
+      return result?.url || result;
     } catch (err) {
       console.error("uploadVideoFile failed", err);
       return null;
@@ -432,11 +445,13 @@ export default function ChatPage() {
       };
 
       // 4) send message
-      await axios.post(
-        "http://arabcodetest.runasp.net/Message/AddMessage",
-        payload,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
-      );
+      await sendMessage({
+        message: payload.message,
+        senderId: currentUserId,
+        receiverId: payload.receiverId,
+        videos: payload.videos,
+        images: payload.images,
+      });
 
       // Clear composer & attachments (SignalR will deliver actual message)
       setNewText("");
@@ -505,7 +520,7 @@ export default function ChatPage() {
         onClick={() => fetchMessages(user)}
         className="user-row"
         aria-pressed={selected}
-        style={{ background: selected ? "#e6f0ff" : "transparent" }}
+        style={{ background: selected ? (document.documentElement.classList.contains('dark-mode') ? "rgba(102, 126, 234, 0.2)" : "#e6f0ff") : "transparent" }}
       >
         <div className="user-avatar" aria-hidden>
           <img src={user.imageUrl || ""} alt={user.userName || "avatar"} onError={handleImgError} />
@@ -516,11 +531,11 @@ export default function ChatPage() {
           <div className="name" style={{ justifyContent: "space-between", gap: 8 }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               <span>{user.userName}</span>
-              {user.isOnline && <small style={{ color: "#0b74ff", fontSize: 12 }}>• نشط الآن</small>}
+              {user.isOnline && <small style={{ color: "var(--accent, #0b74ff)", fontSize: 12 }}>• نشط الآن</small>}
             </span>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {lastTimeDisplay && <div style={{ fontSize: 11, color: "#999", whiteSpace: "nowrap" }}>{lastTimeDisplay}</div>}
+              {lastTimeDisplay && <div style={{ fontSize: 11, color: "var(--muted, #999)", whiteSpace: "nowrap" }}>{lastTimeDisplay}</div>}
               {unread > 0 && (
                 <span className={`unread-badge pulse`} aria-hidden>
                   {unread > 99 ? "99+" : unread}
@@ -560,7 +575,8 @@ export default function ChatPage() {
               {images.map((imgUrl, idx) => (
                 <div
                   key={idx}
-                  style={{ width: 120, height: 80, borderRadius: 8, overflow: "hidden", border: "1px solid #eee", cursor: "pointer" }}
+                  style={{ width: 120, height: 80, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border-color, #eee)", cursor: "pointer" }}
+                  className="dark-mode:border-[rgba(51,65,85,0.8)]"
                   onClick={() => openMedia(imgUrl, "image", m.message || "")}
                 >
                   <img src={imgUrl} alt={`img-${idx}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={handleImgError} />
@@ -573,7 +589,7 @@ export default function ChatPage() {
             <div style={{ display: "flex", gap: 8, flexDirection: "column", marginTop: 8 }}>
               {videos.map((v, idx) => (
                 <div key={idx} style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }} onClick={() => openMedia(v.url, "video", v.title || m.message || "")}>
-                  <div style={{ width: 160, height: 90, borderRadius: 8, overflow: "hidden", border: "1px solid #eee", background: "#000", flexShrink: 0 }}>
+                  <div style={{ width: 160, height: 90, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border-color, #eee)", background: "#000", flexShrink: 0 }} className="dark-mode:border-[rgba(51,65,85,0.8)]">
                     {/* show video thumbnail if provided, else a small poster play view */}
                     {v.thumbnailUrl ? (
                       <img src={v.thumbnailUrl} alt={`thumb-${idx}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={handleImgError} />
@@ -608,7 +624,7 @@ export default function ChatPage() {
       <div className="chat-wrapper" role="application" aria-label="Chat interface" style={{ direction: initialIsRtl ? "rtl" : "ltr" }}>
         {/* Users list */}
         <div className="chat-users" aria-label="Users list">
-          <h3 style={{ padding: 16, margin: 0, borderBottom: "1px solid #eee" }}>المحادثات</h3>
+          <h3 style={{ padding: 16, margin: 0, borderBottom: "1px solid #eee", color: "var(--text-primary, #1a202c)" }} className="dark-mode:text-[#f1f5f9]">المحادثات</h3>
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
             {loadingUsers ? (
               <div style={{ padding: 16 }}>
@@ -623,7 +639,7 @@ export default function ChatPage() {
                 ))}
               </div>
             ) : sortedUsers.length === 0 ? (
-              <p style={{ padding: 16 }}>لا توجد رسائل.</p>
+              <p style={{ padding: 16, color: "var(--muted, #666)" }}>لا توجد رسائل.</p>
             ) : (
               sortedUsers.map(renderUserRow)
             )}
@@ -641,7 +657,7 @@ export default function ChatPage() {
                   </div>
                   <div>
                     <div className="title">{selectedUser.userName}</div>
-                    <div className="status" style={{ color: "#666", fontSize: 13 }}>
+                    <div className="status" style={{ color: "var(--muted, #666)", fontSize: 13 }}>
                       {selectedUser.isOnline ? "نشط الآن" : (selectedUser.lastSeen ? `آخر ظهور ${new Date(selectedUser.lastSeen).toLocaleString()}` : selectedUser.email)}
                     </div>
                   </div>
@@ -656,7 +672,7 @@ export default function ChatPage() {
                     <div className="shimmer" style={{ height: 12, width: "50%", borderRadius: 6 }} />
                   </div>
                 ) : messages.length === 0 ? (
-                  <p style={{ color: "#aaa" }}>لا توجد رسائل.</p>
+                  <p style={{ color: "var(--muted, #aaa)" }}>لا توجد رسائل.</p>
                 ) : (
                   messages.map(renderMessage)
                 )}
@@ -676,12 +692,12 @@ export default function ChatPage() {
 
                 {/* Attach buttons */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <label style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, background: "#fff", border: "1px solid #eee" }}>
+                  <label style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, background: "var(--panel, #fff)", border: "1px solid #eee", color: "var(--text-primary, #1a202c)" }} className="dark-mode:border-[rgba(51,65,85,0.8)] dark-mode:text-[#f1f5f9]">
                     صورة
                     <input type="file" accept="image/*" multiple onChange={handleImageInput} style={{ display: "none" }} disabled={isUploading} />
                   </label>
 
-                  <label style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, background: "#fff", border: "1px solid #eee" }}>
+                  <label style={{ cursor: "pointer", padding: "6px 8px", borderRadius: 8, background: "var(--panel, #fff)", border: "1px solid #eee", color: "var(--text-primary, #1a202c)" }} className="dark-mode:border-[rgba(51,65,85,0.8)] dark-mode:text-[#f1f5f9]">
                     فيديو
                     <input type="file" accept="video/*" multiple onChange={handleVideoInput} style={{ display: "none" }} disabled={isUploading} />
                   </label>
@@ -723,9 +739,9 @@ export default function ChatPage() {
             </>
           ) : (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ textAlign: "center", color: "#666" }}>
-                <h3 style={{ margin: 0 }}>اختر مستخدمًا من القائمة لعرض المحادثة</h3>
-                <p style={{ marginTop: 8 }}>القائمة تعرض من هم نشطون وعدد الرسائل غير المقروءة</p>
+              <div style={{ textAlign: "center", color: "var(--muted, #666)" }}>
+                <h3 style={{ margin: 0, color: "var(--text-primary, #1a202c)" }} className="dark-mode:text-[#f1f5f9]">اختر مستخدمًا من القائمة لعرض المحادثة</h3>
+                <p style={{ marginTop: 8, color: "var(--muted, #666)" }}>القائمة تعرض من هم نشطون وعدد الرسائل غير المقروءة</p>
               </div>
             </div>
           )}

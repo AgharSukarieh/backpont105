@@ -1,24 +1,48 @@
 import api from "./api";
 
-export const getUnreadNotificationsCount = async (idUser) => {
-  try { 
-    const response = await api.get(`/Notification/NumberUnRead/${idUser}`);
-    console.log("Unread Notifications Count response data:", response.data);
-    return response.data;
-  } catch (err) {
-    console.error("Error fetching unread notifications:", err);
-    return 0;
+/**
+ * Notification Service - خدمة الإشعارات
+ * جميع endpoints الإشعارات حسب التوثيق
+ */
+
+/**
+ * جلب إشعارات مستخدم معين
+ * @param {number} userId - معرف المستخدم
+ * @returns {Promise<Array>} قائمة الإشعارات
+ */
+export const fetchNotificationsByUser = async (userId) => {
+  if (!userId) return [];
+  try {
+    const response = await api.get(`/api/notifications/users/${userId}`, {
+      headers: {
+        accept: "*/*",
+      },
+    });
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return [];
   }
 };
 
-export const fetchNotificationsByUser = async (idUser) => {
-  if (!idUser) return [];
+/**
+ * جلب عدد الإشعارات غير المقروءة
+ * @param {number} userId - معرف المستخدم
+ * @returns {Promise<Object>} { count: number }
+ */
+export const getUnreadNotificationsCount = async (userId) => {
   try {
-    const response = await api.get(`/Notification/GetNotificationByUserId/${idUser}`);
-    console.log("Notifications response data:", response.data);
-    return response.data || [];
-  } catch (err) {
-    console.error("Error fetching notifications:", err);
-    return [];
+    const response = await api.get(
+      `/api/notifications/users/${userId}/unread-count`,
+      {
+        headers: {
+          accept: "*/*",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching unread notifications count:", error);
+    return { count: 0 };
   }
 };

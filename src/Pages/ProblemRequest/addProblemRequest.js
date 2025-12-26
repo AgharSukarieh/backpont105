@@ -5,9 +5,26 @@ import { selectAuthSession } from "../../store/authSlice";
 import api from "../../Service/api";
 import { getAllTags } from "../../Service/TagServices";
 import { uploadUserImage } from "../../Service/userService";
-import { ArrowRight } from "lucide-react";
+import { addProblemRequest } from "../../Service/problemRequestService";
 import Swal from "sweetalert2";
 import "./addProblemRequest.css";
+
+// Ensure boxicons is loaded
+const ensureBoxicons = () => {
+  if (typeof document === "undefined") return;
+  const BOXICON_LINK_ID = "add-problem-request-boxicons-link";
+  if (!document.getElementById(BOXICON_LINK_ID)) {
+    const link = document.createElement("link");
+    link.id = BOXICON_LINK_ID;
+    link.rel = "stylesheet";
+    link.href = "https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css";
+    link.crossOrigin = "anonymous";
+    link.onerror = () => {
+      console.warn("Failed to load Boxicons from CDN, using fallback");
+    };
+    document.head.appendChild(link);
+  }
+};
 
 const AddProblemProposal = () => {
   const navigate = useNavigate();
@@ -31,6 +48,10 @@ const AddProblemProposal = () => {
   ]);
   const [loading, setLoading] = useState(false);
   const [tagsLoading, setTagsLoading] = useState(true);
+
+  useEffect(() => {
+    ensureBoxicons();
+  }, []);
 
   // جلب الوسوم المتاحة
   useEffect(() => {
@@ -177,13 +198,9 @@ const AddProblemProposal = () => {
 
       // إرسال الطلب
       console.log("📤 Sending payload:", payload);
-      console.log("📤 Endpoint: /ProblemRequest/addProblemRequest");
-      const response = await api.post("/ProblemRequest/addProblemRequest", payload, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      console.log("✅ Response:", response.data);
+      console.log("📤 Endpoint: /api/problem-requests");
+      const response = await addProblemRequest(payload);
+      console.log("✅ Response:", response);
 
       // عرض رسالة النجاح
       Swal.fire({
@@ -239,18 +256,23 @@ const AddProblemProposal = () => {
   };
 
   return (
-    <div className="add-problem-request-page">
-      <div className="add-problem-request-container">
-        {/* Back Button */}
+    <div className="add-problem-request-page" style={{ direction: "rtl" }}>
+      {/* Header */}
+      <div className="add-problem-request-header">
         <button
-          className="back-button"
           onClick={() => navigate(-1)}
+          className="add-problem-request-back-btn"
+          aria-label="العودة"
         >
-          <ArrowRight className="back-icon" />
-          <span>رجوع</span>
+          <i className="bx bx-arrow-back back-icon"></i>
         </button>
+        <div className="add-problem-request-header-content">
+          <h1 className="add-problem-request-title-header">إضافة اقتراح مشكلة</h1>
+        </div>
+      </div>
 
-        <h1 className="add-problem-request-title">إضافة اقتراح مشكلة</h1>
+      <div className="add-problem-request-main">
+        <div className="add-problem-request-container">
 
         <form className="add-problem-request-form" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
           {/* العنوان */}
@@ -531,6 +553,7 @@ const AddProblemProposal = () => {
             )}
           </button>
         </form>
+        </div>
       </div>
     </div>
   );

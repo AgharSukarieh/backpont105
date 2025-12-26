@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getProblemsPaging } from "../../Service/ProblemService";
-import LoadingCartoon from "../Loading";
-import { useNavigate } from "react-router-dom"; // نستخدمه للتوجيه
+import { useNavigate } from "react-router-dom";
+import { ListSkeleton } from "../../Components/SkeletonLoading";
 
 const ProblemsList = () => {
   const [problems, setProblems] = useState([]);
@@ -36,7 +36,7 @@ const ProblemsList = () => {
     }
   };
 
-  if (loading) return <LoadingCartoon />;
+  if (loading) return <ListSkeleton count={10} />;
 
   return (
     <div style={{ padding: "20px" }}>

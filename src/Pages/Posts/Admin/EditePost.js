@@ -3,14 +3,24 @@ import api from "../../../Service/api";
 import { uploadUserImage } from "../../../Service/userService";
 import { uploadUserVideo } from "../../../Service/UploadVideoService";
 import { getAllTags } from "../../../Service/TagServices"; 
+import { getPostById, updatePost } from "../../../Service/postService";
 import { useNavigate, useParams } from "react-router-dom";
 import { Editor } from "@tinymce/tinymce-react";
+import Swal from "sweetalert2";
 
 const TINYMCE_API_KEY = "ydbgd84essmlucuqp6di1jaz8o8m7murr9yj34z0en3lv9r5";
 
 const AdminEditPost = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const params = useParams();
+  const { postId, id } = params;
+  const actualId = postId || id; // استخدام postId إذا كان موجوداً، وإلا id
+
+  console.log("🔍 AdminEditPost component mounted");
+  console.log("🔍 Params:", params);
+  console.log("🔍 postId:", postId);
+  console.log("🔍 id:", id);
+  console.log("🔍 actualId:", actualId);
 
   const storedUserId = localStorage.getItem("idUser");
   const userId = storedUserId ? Number(storedUserId) : null;
@@ -33,23 +43,67 @@ const AdminEditPost = () => {
   // Load post data
   useEffect(() => {
     const fetchPost = async () => {
+      if (!actualId) {
+        console.error("❌ Post ID is missing");
+        console.error("❌ Available params:", { postId, id, actualId });
+        Swal.fire({
+          icon: "error",
+          title: "❌ خطأ",
+          text: "معرف المنشور غير موجود",
+          confirmButtonText: "حسنًا",
+        });
+        setLoading(false);
+        return;
+      }
+      
       try {
-        const res = await api.get(`/Post/GetById/${id}`);
-        const data = res.data;
+        setLoading(true);
+        const numericPostId = Number(actualId);
+        console.log("📤 Fetching post with ID:", numericPostId);
+        console.log("📤 Params:", { postId, id, actualId });
+        
+        if (isNaN(numericPostId) || numericPostId <= 0) {
+          throw new Error("معرف المنشور غير صحيح");
+        }
+        
+        const data = await getPostById(numericPostId);
+        console.log("✅ Post data received:", data);
+        
+        if (!data || !data.id) {
+          throw new Error("لم يتم العثور على بيانات المنشور");
+        }
+        
         setPost(data);
         setTitle(data.title || "");
         setContent(data.content || "");
         setImages((data.images || []).map(url => ({ url, file: null, uploading: false })));
         setVideos(data.videos || []);
-        setSelectedTags(data.postTags?.map(tag => tag.id) || []);
+        setSelectedTags(data.postTags?.map(tag => tag.id) || data.tags?.map(tag => tag.id) || []);
       } catch (err) {
-        console.error("Failed to fetch post:", err);
+        console.error("❌ Failed to fetch post:", err);
+        console.error("❌ Error details:", {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+          postId: actualId,
+          params: { postId, id },
+        });
+        
+        Swal.fire({
+          icon: "error",
+          title: "❌ خطأ",
+          text: "فشل تحميل بيانات المنشور: " + (err.message || "خطأ غير معروف"),
+          confirmButtonText: "حسنًا",
+          footer: err.response?.status ? `رمز الخطأ: ${err.response.status}` : "",
+        });
+        setPost(null);
       } finally {
         setLoading(false);
       }
     };
     fetchPost();
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actualId]);
 
   // Load available tags
   useEffect(() => {
@@ -168,9 +222,9 @@ const AdminEditPost = () => {
     }
 
     const body = {
-      id: post.id,
       title: title.trim(),
       content,
+      userId: userId || post.userId || Number(localStorage.getItem("idUser")) || 0,
       videos: videos
         .map(v => ({
           title: v.title?.trim() || null,
@@ -183,20 +237,78 @@ const AdminEditPost = () => {
       tags: selectedTags,
     };
 
+    // التحقق من userId قبل الإرسال
+    if (!body.userId || body.userId <= 0) {
+      Swal.fire({
+        icon: "error",
+        title: "❌ خطأ",
+        text: "معرف المستخدم غير موجود. يرجى تسجيل الدخول مرة أخرى.",
+        confirmButtonText: "حسنًا",
+      });
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      await api.put("/Post/Update", body);
-      alert("تم حفظ التعديلات بنجاح!");
-      navigate(-1);
+      console.log("📤 Updating post:", post.id, body);
+      await updatePost(post.id, body);
+      
+      Swal.fire({
+        icon: "success",
+        title: "✅ نجاح",
+        text: "تم حفظ التعديلات بنجاح!",
+        confirmButtonText: "حسنًا",
+      }).then(() => navigate(-1));
     } catch (err) {
-      console.error(err);
-      alert("حدث خطأ أثناء حفظ التعديلات");
+      console.error("❌ Error updating post:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        postId: post.id,
+      });
+      
+      const errorMessage = err.message || err.response?.data?.message || "حدث خطأ أثناء حفظ التعديلات";
+      Swal.fire({
+        icon: "error",
+        title: "❌ خطأ",
+        text: errorMessage,
+        confirmButtonText: "حسنًا",
+        footer: err.response?.status ? `رمز الخطأ: ${err.response.status}` : "",
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <p className="text-center mt-10">جاري التحميل...</p>;
-  if (!post) return <p className="text-center mt-10 text-red-600">لم يتم العثور على البوست</p>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-50" dir="rtl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg text-gray-700">⏳ جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!post) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-50" dir="rtl">
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <p className="text-xl text-red-500 mb-4">❌ لم يتم العثور على المنشور</p>
+          <p className="text-gray-600 mb-4">معرف المنشور: {actualId || "غير موجود"}</p>
+          <p className="text-gray-500 text-sm mb-4">Params: postId={postId}, id={id}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            رجوع
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-4">

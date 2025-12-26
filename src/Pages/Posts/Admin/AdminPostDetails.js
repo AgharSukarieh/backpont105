@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../../Service/api";
+import { getPostById } from "../../../Service/postService";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -14,11 +15,37 @@ const AdminPostDetails = () => {
 
   useEffect(() => {
     const fetchPost = async () => {
+      if (!id) {
+        console.error("❌ Post ID is missing");
+        setLoading(false);
+        return;
+      }
+      
       try {
-        const res = await api.get(`/Post/GetById/${id}`);
-        setPost(res.data);
+        setLoading(true);
+        const postId = Number(id);
+        console.log("📤 Fetching post with ID:", postId);
+        
+        if (isNaN(postId) || postId <= 0) {
+          throw new Error("معرف المنشور غير صحيح");
+        }
+        
+        const data = await getPostById(postId);
+        console.log("✅ Post data received:", data);
+        
+        if (!data || !data.id) {
+          throw new Error("لم يتم العثور على بيانات المنشور");
+        }
+        
+        setPost(data);
       } catch (err) {
-        console.error("Error fetching post:", err);
+        console.error("❌ Error fetching post:", err);
+        console.error("❌ Error details:", {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+          postId: id,
+        });
       } finally {
         setLoading(false);
       }
@@ -105,8 +132,33 @@ const AdminPostDetails = () => {
     }
   };
 
-  if (loading) return <p className="text-center mt-10 text-lg">جاري التحميل...</p>;
-  if (!post) return <p className="text-center mt-10 text-lg text-red-600">لم يتم العثور على البوست</p>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-50" dir="rtl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg text-gray-700">⏳ جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!post) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-50" dir="rtl">
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <p className="text-xl text-red-500 mb-4">❌ لم يتم العثور على المنشور</p>
+          <p className="text-gray-600 mb-4">معرف المنشور: {id}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            رجوع
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">

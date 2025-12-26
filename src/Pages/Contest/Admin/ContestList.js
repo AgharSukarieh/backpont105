@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../Service/api";
+import { getAllContests, deleteContest } from "../../../Service/contestService";
 
 const ContestList = () => {
   const [contests, setContests] = useState([]);
@@ -10,8 +11,10 @@ const ContestList = () => {
 
   const fetchContests = async () => {
     try {
-      const res = await api.get("/Contest/GetAllContest");
-      const dataWithStatus = res.data.map((contest) => {
+      const data = await getAllContests();
+      const dataArray = Array.isArray(data) ? data : (data?.data || []);
+      
+      const dataWithStatus = dataArray.map((contest) => {
         const now = new Date();
         const start = new Date(contest.startTime);
         const end = new Date(contest.endTime);
@@ -28,6 +31,7 @@ const ContestList = () => {
       setContests(dataWithStatus);
   } catch (err) {
     console.error("Error fetching contests:", err);
+      setContests([]);
   }
 };
 
@@ -41,17 +45,13 @@ const ContestList = () => {
   // ✅ تنفيذ الحذف
   const handleDelete = async () => {
     try {
-      await api.delete(`/Contest/RemoveContest?id=${selectedContest.id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
+      await deleteContest(selectedContest.id);
       setContests(contests.filter((c) => c.id !== selectedContest.id));
       setShowConfirm(false);
       setSelectedContest(null);
     } catch (err) {
       console.error("Error deleting contest:", err);
+      alert("فشل حذف المسابقة: " + (err.message || "حدث خطأ"));
       setShowConfirm(false);
     }
   };

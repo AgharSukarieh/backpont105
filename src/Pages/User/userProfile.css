@@ -414,6 +414,11 @@
   border: 1px solid #ffecb3;
 }
 
+.stat-card--purple {
+  background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+  border: 1px solid #c084fc;
+}
+
 .stat-card-icon {
   font-size: 2.25rem;
   line-height: 1;

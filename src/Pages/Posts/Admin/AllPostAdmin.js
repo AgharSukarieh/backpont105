@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { getAllPosts, deletePost } from "../../../Service/postService";
 
 import {
   LineChart,
@@ -46,8 +47,9 @@ const AdminPosts = () => {
 
   const fetchPosts = async () => {
     try {
-      const { data } = await api.get("/Post/GetAll");
-      setPosts(data);
+      const data = await getAllPosts();
+      const postsArray = Array.isArray(data) ? data : [];
+      setPosts(postsArray);
 
       // احصائيات
       const userSet = new Set();
@@ -55,16 +57,17 @@ const AdminPosts = () => {
       const downloadsPerUser = {};
       let totalLikes = 0;
 
-      data.forEach((post) => {
-        userSet.add(post.userId);
-        postsPerUser[post.userName] = (postsPerUser[post.userName] || 0) + 1;
-        downloadsPerUser[post.userName] =
-          (downloadsPerUser[post.userName] || 0) + (post.downloadCount || 0);
-        totalLikes += post.likesCount || 0; // مجموع اللايكات
+      postsArray.forEach((post) => {
+        if (post.userId) userSet.add(post.userId);
+        const userName = post.userName || post.user?.userName || "غير محدد";
+        postsPerUser[userName] = (postsPerUser[userName] || 0) + 1;
+        downloadsPerUser[userName] =
+          (downloadsPerUser[userName] || 0) + (post.downloadCount || 0);
+        totalLikes += post.numberLike || post.likesCount || 0; // مجموع اللايكات
       });
 
       setStats({
-        totalPosts: data.length,
+        totalPosts: postsArray.length,
         totalUsers: userSet.size,
         totalLikes,
         postsPerUser,
@@ -72,6 +75,7 @@ const AdminPosts = () => {
       });
     } catch (error) {
       console.error("Error fetching posts:", error);
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -97,13 +101,13 @@ const AdminPosts = () => {
   const handleDelete = async () => {
     if (!postToDelete) return;
     try {
-      await api.delete(`/Post/Delete`, { params: { id: postToDelete } });
+      await deletePost(postToDelete);
       setPosts(posts.filter((p) => p.id !== postToDelete));
       setShowConfirm(false);
       setPostToDelete(null);
     } catch (error) {
       console.error("Error deleting post:", error);
-      alert("حدث خطأ أثناء الحذف");
+      alert("حدث خطأ أثناء الحذف: " + (error.message || "خطأ غير معروف"));
     }
   };
 
@@ -198,28 +202,28 @@ const AdminPosts = () => {
               className="w-16 h-16 cursor-pointer rounded-full object-cover"
             />
             <div className="flex-1">
-              <h2 className="text-xl font-bold mb-1">{post.title}</h2>
+              <h2 className="text-xl font-bold mb-1">{post.title || "بدون عنوان"}</h2>
               <h3
                 onClick={() =>
                   navigate(`/react-app/admin/view-user/${post.userId}`)
                 }
                 className="font-semibold cursor-pointer"
               >
-                {post.userName}
+                {post.userName || post.user?.userName || "غير محدد"}
               </h3>
               <p className="text-sm text-gray-500 mb-1">
-                تاريخ الإنشاء: {new Date(post.createdAt).toLocaleString()}
+                تاريخ الإنشاء: {post.createdAt ? new Date(post.createdAt).toLocaleString() : "غير محدد"}
               </p>
               <p className="text-gray-700 text-sm line-clamp-1 overflow-hidden">
-                {post.content.replace(/<[^>]+>/g, "")}
+                {post.content ? post.content.replace(/<[^>]+>/g, "") : "لا يوجد محتوى"}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {post.postTags.map((tag) => (
+                {(post.postTags || post.tags || []).map((tag, idx) => (
                   <span
-                    key={tag.id}
+                    key={tag.id || tag || idx}
                     className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
                   >
-                    {tag.tagName}
+                    {tag.tagName || tag.name || tag}
                   </span>
                 ))}
               </div>

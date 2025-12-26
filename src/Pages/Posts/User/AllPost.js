@@ -8,6 +8,10 @@ import CreatePostModal from "./CreatePostModal";
 import { useSelector } from "react-redux";
 import { selectAuthSession } from "../../../store/authSlice";
 import Events from "../../Contest/Events";
+import { getFollowers as fetchFollowers } from "../../../Service/followService";
+import { getAllPosts, searchPosts, deletePost } from "../../../Service/postService";
+import { likePost, unlikePost, checkLikeStatus, getPostLikes } from "../../../Service/likeService";
+import { getAllTags } from "../../../Service/TagServices";
 
 /*
   نسخة JS من PostsPage مع سلوكين جديدين:
@@ -79,13 +83,18 @@ const PostsPage = () => {
   const [followersError, setFollowersError] = useState(null);
   const [followersSearchText, setFollowersSearchText] = useState("");
 
+  // State for "المزيد" button for each post
+  const [expandedPosts, setExpandedPosts] = useState({}); // { [postId]: true }
+
   const navigate = useNavigate();
   const location = useLocation();
   
   // Create Post Modal state
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState(null);
-  const fileInputRef = useRef(null);
+  const [editPostData, setEditPostData] = useState(null); // بيانات البوست المراد تعديله
+  const imageInputRef = useRef(null);
+  const videoInputRef = useRef(null);
   
   // Get user from session
   const session = useSelector(selectAuthSession);
@@ -138,14 +147,73 @@ const PostsPage = () => {
   const getPosts = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/Post/GetAll");
-      const fetched = res.data || [];
-      const sorted = sortPostsDesc(fetched);
+      const fetched = await getAllPosts();
+      
+      // التحقق من أن numberLike موجود في البيانات المجلوبة
+      if (fetched && fetched.length > 0) {
+        const samplePost = fetched[0];
+        console.log("📊 Checking numberLike in fetched posts:", {
+          hasNumberLike: samplePost.numberLike !== undefined,
+          numberLike: samplePost.numberLike,
+          allPostKeys: Object.keys(samplePost),
+        });
+        
+        // التحقق من جميع المنشورات
+        const postsWithoutNumberLike = fetched.filter(p => p.numberLike === undefined && p.numberLike === null);
+        if (postsWithoutNumberLike.length > 0) {
+          console.warn(`⚠️ Warning: ${postsWithoutNumberLike.length} posts are missing numberLike`);
+        }
+      }
+      
+      const sorted = sortPostsDesc(fetched || []);
 
-      setAllPosts(sorted);
-      setDisplayedPosts(sorted);
-      setLikes(buildInitialLikes(sorted));
+      // Fetch actual comment counts only for posts that don't have numberComment
+      const { getPostWithComments } = await import("../../../Service/commentService");
+      
+      const postsWithCommentCounts = await Promise.all(
+        sorted.map(async (post) => {
+          // If numberComment is already present and valid, use it
+          if (post.numberComment !== undefined && post.numberComment !== null && post.numberComment >= 0) {
+            return post;
+          }
+          
+          // Otherwise, fetch actual count from API
+          try {
+            const postData = await getPostWithComments(post.id);
+            const commentCount = postData?.numberComment ?? (Array.isArray(postData?.comments) ? postData.comments.length : 0);
+            
+            return {
+              ...post,
+              numberComment: commentCount,
+            };
+          } catch (err) {
+            console.warn(`Failed to fetch comment count for post ${post.id}:`, err);
+            // If fetching fails, use 0
+            return {
+              ...post,
+              numberComment: 0,
+            };
+          }
+        })
+      );
+
+      // التأكد من أن numberLike موجود في كل منشور
+      const postsWithNumberLike = postsWithCommentCounts.map(post => {
+        // إذا لم يكن numberLike موجوداً، استخدم القيمة الافتراضية 0
+        if (post.numberLike === undefined || post.numberLike === null) {
+          console.warn(`⚠️ Post ${post.id} is missing numberLike, setting to 0`);
+          return { ...post, numberLike: 0 };
+        }
+        return post;
+      });
+      
+      setAllPosts(postsWithNumberLike);
+      setDisplayedPosts(postsWithNumberLike);
+      setLikes(buildInitialLikes(postsWithNumberLike));
       setServerFilterApplied(false);
+      
+      // تحديث التاغات الشائعة بعد جلب المنشورات
+      // سيتم استدعاؤها في useEffect أدناه
     } catch (error) {
       console.error("Error fetching posts:", {
         message: error.message,
@@ -182,10 +250,8 @@ const PostsPage = () => {
     setFollowersLoading(true);
     setFollowersError(null);
     try {
-      const response = await api.get(`/Follow/GetListFollowers`, {
-        params: { idUser: userId }
-      });
-      setFollowers(response.data || []);
+      const data = await fetchFollowers(Number(userId));
+      setFollowers(data || []);
     } catch (err) {
       console.error("Failed to fetch followers:", err);
       setFollowersError("فشل جلب قائمة المتابعين");
@@ -200,33 +266,65 @@ const PostsPage = () => {
     popularAbortRef.current?.abort();
     popularAbortRef.current = new AbortController();
     try {
-      const response = await api.get("/Post/MostTagUsedInPosts", {
-        signal: popularAbortRef.current.signal,
-      });
-      console.log("Popular tags response:", response.data);
+      console.log("📤 Fetching trending tags with counts...");
       
-      // معالجة البيانات حسب شكل الاستجابة
-      let tags = response.data || [];
-      if (!Array.isArray(tags)) {
-        if (tags.data && Array.isArray(tags.data)) {
-          tags = tags.data;
-        } else if (tags.tags && Array.isArray(tags.tags)) {
-          tags = tags.tags;
-        } else if (tags.result && Array.isArray(tags.result)) {
-          tags = tags.result;
-        }
-      }
+      // 1. جلب قائمة التاغات من API
+      const tags = await getAllTags();
+      console.log(`✅ Fetched ${tags.length} tags`);
       
-      if (Array.isArray(tags)) {
-        setPopularTags(tags);
-        setPopularError(null);
-      } else {
+      if (!Array.isArray(tags) || tags.length === 0) {
         setPopularTags([]);
         setPopularError(null);
+        return;
       }
+      
+      // 2. حساب عدد المنشورات لكل تاغ من allPosts
+      const tagCountMap = {};
+      
+      console.log(`📊 Processing ${allPosts.length} posts for tag counts...`);
+      
+      allPosts.forEach((post, index) => {
+        if (post.postTags && Array.isArray(post.postTags) && post.postTags.length > 0) {
+          console.log(`  Post ${post.id} has ${post.postTags.length} tags:`, post.postTags);
+          post.postTags.forEach(tag => {
+            const tagId = tag.id || tag.tagId;
+            if (tagId) {
+              tagCountMap[tagId] = (tagCountMap[tagId] || 0) + 1;
+            } else {
+              console.warn(`  ⚠️ Tag without ID in post ${post.id}:`, tag);
+            }
+          });
+        } else {
+          if (index < 3) { // Log only first 3 posts for debugging
+            console.log(`  Post ${post.id} has no tags or empty postTags`);
+          }
+        }
+      });
+      
+      console.log("📊 Tag counts map:", tagCountMap);
+      console.log(`📊 Total unique tags found: ${Object.keys(tagCountMap).length}`);
+      
+      // 3. دمج بيانات التاغات مع العدد وترتيبها
+      const trendingTags = tags
+        .map(tag => {
+          const tagId = tag.id || tag.tagId;
+          const count = tagCountMap[tagId] || 0;
+          return {
+            ...tag,
+            tagId: tagId,
+            tagName: tag.tagName || tag.name,
+            numberOfUsed: count, // عدد المنشورات
+          };
+        })
+        .filter(tag => tag.numberOfUsed > 0) // إزالة التاغات التي لا تحتوي على منشورات
+        .sort((a, b) => b.numberOfUsed - a.numberOfUsed); // ترتيب من الأكثر إلى الأقل
+      
+      console.log(`✅ Found ${trendingTags.length} trending tags with counts:`, trendingTags.map(t => `${t.tagName}: ${t.numberOfUsed}`));
+      setPopularTags(trendingTags);
+      setPopularError(null);
     } catch (err) {
       if (err.name === "AbortError") return;
-      console.error("Failed to fetch popular tags:", err);
+      console.error("❌ Failed to fetch trending tags:", err);
       setPopularError(null); // لا نعرض خطأ، فقط لا توجد بيانات
       setPopularTags([]);
     } finally {
@@ -236,9 +334,64 @@ const PostsPage = () => {
 
   useEffect(() => {
     getPosts();
-    getPopularTags();
     getFollowers();
   }, []);
+  
+  // تحديث التاغات الشائعة عند تغيير allPosts
+  useEffect(() => {
+    if (allPosts.length > 0) {
+      console.log(`🔄 Updating popular tags based on ${allPosts.length} posts`);
+      getPopularTags();
+    }
+  }, [allPosts.length]); // استدعاء فقط عند تغيير عدد المنشورات
+
+  // Load filters from URL on mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const textParam = searchParams.get("text");
+    const fromParam = searchParams.get("from");
+    const toParam = searchParams.get("to");
+    
+    if (textParam || fromParam || toParam) {
+      if (textParam) setFilterText(textParam);
+      if (fromParam) {
+        // Convert ISO string to datetime-local format
+        const date = new Date(fromParam);
+        if (!isNaN(date.getTime())) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          setFilterFrom(`${year}-${month}-${day}T${hours}:${minutes}`);
+        }
+      }
+      if (toParam) {
+        // Convert ISO string to datetime-local format
+        const date = new Date(toParam);
+        if (!isNaN(date.getTime())) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          setFilterTo(`${year}-${month}-${day}T${hours}:${minutes}`);
+        }
+      }
+      
+      // Apply filters automatically if they exist in URL
+      if (textParam || fromParam || toParam) {
+        // Delay to ensure state is set
+        setTimeout(() => {
+          const form = document.getElementById("posts-filter-panel");
+          if (form) {
+            const event = new Event("submit", { bubbles: true, cancelable: true });
+            form.dispatchEvent(event);
+          }
+        }, 100);
+      }
+    }
+  }, [location.search]);
 
   // cleanup highlight timers on unmount
   useEffect(() => {
@@ -483,10 +636,8 @@ const PostsPage = () => {
       setPopularLoading(true);
       setPopularError(null);
       try {
-        const res = await api.get("/Post/MostTagUsedInPosts", {
-          signal: controller.signal,
-        });
-        const data = res?.data ?? [];
+        // استخدام getAllTags من API الجديد
+        const data = await getAllTags();
         if (Array.isArray(data)) {
           setPopularTags(data);
         } else {
@@ -602,18 +753,19 @@ const PostsPage = () => {
       if (filterText.trim()) params.text = filterText.trim();
       if (filterFrom) {
         const d = new Date(filterFrom);
-        if (!isNaN(d)) params.From = d.toISOString();
+        if (!isNaN(d)) params.from = d.toISOString();
       }
       if (filterTo) {
         const d = new Date(filterTo);
-        if (!isNaN(d)) params.To = d.toISOString();
+        if (!isNaN(d)) params.to = d.toISOString();
       }
 
-      const res = await api.get("/Post/GetAllWithFilteration", {
-        params,
-        signal: controller.signal,
+      // استخدام searchPosts من API الجديد
+      const fetched = await searchPosts({
+        text: params.text || "",
+        from: params.from,
+        to: params.to,
       });
-      const fetched = res.data ?? [];
 
       const sorted = sortPostsDesc(Array.isArray(fetched) ? fetched : []);
       setAllPosts(sorted);
@@ -624,8 +776,8 @@ const PostsPage = () => {
 
       const sp = new URLSearchParams();
       if (params.text) sp.set("text", params.text);
-      if (params.From) sp.set("from", params.From);
-      if (params.To) sp.set("to", params.To);
+      if (params.from) sp.set("from", params.from);
+      if (params.to) sp.set("to", params.to);
       const basePath = location.pathname || "/react-app";
       navigate(`${basePath}?${sp.toString()}`, { replace: true });
     } catch (err) {
@@ -684,19 +836,19 @@ const PostsPage = () => {
     try {
       const willBeLiked = !prev.isLiked;
 
-      let res;
+      // استخدام likePost/unlikePost من API الجديد
       if (willBeLiked) {
-        res = await api.post("/PostLike/Add", null, {
-          params: { postID: Number(postId), UserId: Number(userId) },
-        });
+        await likePost(Number(postId));
       } else {
-        res = await api.delete("/PostLike/Remove", {
-          params: { postID: Number(postId), UserId: Number(userId) },
-        });
+        await unlikePost(Number(postId));
       }
 
-      const serverIsLikedIt = res?.data?.isLikedIt;
-      const serverNumberLike = res?.data?.numberLike ?? res?.data?.numberOfLikes ?? null;
+      // جلب حالة الإعجاب من API
+      const isLiked = await checkLikeStatus(Number(postId));
+      const likedUsersList = await getPostLikes(Number(postId));
+      
+      const serverIsLikedIt = isLiked;
+      const serverNumberLike = likedUsersList?.length ?? null;
 
       if (serverIsLikedIt !== undefined && serverIsLikedIt !== null) {
         const serverIsLiked = parseIsLiked(serverIsLikedIt);
@@ -771,10 +923,8 @@ const PostsPage = () => {
     setModalOpenPostId(postId);
 
     try {
-      const res = await api.get("/PostLike/GetUserLikedPost", {
-        params: { postID: Number(postId) },
-      });
-      const data = res?.data ?? [];
+      // استخدام getPostLikes من API الجديد
+      const data = await getPostLikes(Number(postId));
       setLikedUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch liked users:", err?.response ?? err);
@@ -818,9 +968,8 @@ const PostsPage = () => {
     setDeletingPostId(postId);
 
     try {
-      await api.delete("/Post/Delete", {
-        params: { id: Number(postId) },
-      });
+      // استخدام deletePost من API الجديد
+      await deletePost(Number(postId));
 
       setAllPosts((s) => s.filter((p) => p.id !== postId));
       setDisplayedPosts((s) => s.filter((p) => p.id !== postId));
@@ -840,17 +989,89 @@ const PostsPage = () => {
     }
   };
 
-  const handleEditPost = (e, postId) => {
+  const handleEditPost = async (e, postId) => {
     stop(e);
-    navigate(`/react-app/Post/Edit/${postId}`);
+    try {
+      // جلب بيانات البوست من القائمة الحالية أو من API
+      const post = allPosts.find(p => p.id === postId);
+      if (post) {
+        setEditPostData({
+          id: post.id,
+          title: post.title || "",
+          content: post.content || "",
+          images: post.images || [],
+          videos: post.videos || [],
+          tags: post.postTags?.map(t => t.id || t.tagId) || []
+        });
+        setShowCreatePostModal(true);
+      } else {
+        // إذا لم يكن البوست في القائمة، جلبها من API
+        const { getPostById } = await import("../../../Service/postService");
+        const postData = await getPostById(postId);
+        setEditPostData({
+          id: postData.id,
+          title: postData.title || "",
+          content: postData.content || "",
+          images: postData.images || [],
+          videos: postData.videos || [],
+          tags: postData.postTags?.map(t => t.id || t.tagId) || []
+        });
+        setShowCreatePostModal(true);
+      }
+    } catch (error) {
+      console.error("Failed to load post for editing:", error);
+      alert("فشل تحميل بيانات البوست للتعديل");
+    }
   };
 
-  const openCommentsModal = (e, postId) => {
+  const openCommentsModal = async (e, postId) => {
     stop(e);
+    
+    // Fetch actual comment count from API when opening modal
+    try {
+      const { getPostWithComments } = await import("../../../Service/commentService");
+      const postData = await getPostWithComments(postId);
+      const commentCount = postData?.numberComment ?? (Array.isArray(postData?.comments) ? postData.comments.length : 0);
+      
+      // Update comment count in state
+      setAllPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, numberComment: commentCount } : p))
+      );
+      setDisplayedPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, numberComment: commentCount } : p))
+      );
+    } catch (err) {
+      console.warn(`Failed to fetch comment count for post ${postId}:`, err);
+    }
+    
     setCommentsModalPostId(postId);
   };
 
   const closeCommentsModal = () => setCommentsModalPostId(null);
+
+  const handleCommentCountChanged = (postId, newCount) => {
+    // Update comment count in both allPosts and displayedPosts
+    setAllPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, numberComment: newCount } : p))
+    );
+    setDisplayedPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, numberComment: newCount } : p))
+    );
+  };
+
+  // Update comment count for a post
+  const updatePostCommentCount = (postId, newCount) => {
+    setAllPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId ? { ...p, numberComment: newCount, comments: undefined } : p
+      )
+    );
+    setDisplayedPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId ? { ...p, numberComment: newCount, comments: undefined } : p
+      )
+    );
+  };
 
   const renderMediaGrid = (post) => {
     const images = post.images ?? [];
@@ -867,13 +1088,34 @@ const PostsPage = () => {
       const m = media[0];
       return (
         <div className="mt-4">
-          <div className="w-full aspect-[16/9] overflow-hidden rounded-2xl bg-slate-100 shadow-md">
+          <div 
+            onClick={(e) => {
+              stop(e);
+              navigate(`/react-app/Post/${post.id}`);
+            }}
+            className="w-full aspect-[16/9] overflow-hidden rounded-2xl bg-slate-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+          >
             {m.type === "image" ? (
               <img src={m.src} alt={post.title ? `${post.title} media` : `post-${post.id}-media-0`} loading="lazy" className="w-full h-full object-cover transform transition duration-300 group-hover:scale-[1.02]" onError={(e) => (e.currentTarget.style.display = "none")} />
             ) : m.thumb ? (
-              <img src={m.thumb} alt={`video-thumb-${post.id}`} loading="lazy" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+              <div className="relative w-full h-full">
+                <img src={m.thumb} alt={`video-thumb-${post.id}`} loading="lazy" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <div className="bg-black/60 rounded-full p-3 hover:bg-black/80 transition">
+                    <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-white bg-black">▶</div>
+              <div className="w-full h-full flex items-center justify-center text-white bg-black">
+                <div className="bg-black/60 rounded-full p-3">
+                  <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -884,13 +1126,35 @@ const PostsPage = () => {
       return (
         <div className="mt-4 grid grid-cols-2 gap-3">
           {media.slice(0, 2).map((m, i) => (
-            <div key={i} className="aspect-square overflow-hidden rounded-2xl shadow-sm">
+            <div 
+              key={i} 
+              onClick={(e) => {
+                stop(e);
+                navigate(`/react-app/Post/${post.id}`);
+              }}
+              className="aspect-square overflow-hidden rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            >
               {m.type === "image" ? (
                 <img src={m.src} alt={`post-${post.id}-img-${i}`} loading="lazy" className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.03]" onError={(e) => (e.currentTarget.style.display = "none")} />
               ) : m.thumb ? (
-                <img src={m.thumb} alt={`video-thumb-${i}`} loading="lazy" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+                <div className="relative w-full h-full">
+                  <img src={m.thumb} alt={`video-thumb-${i}`} loading="lazy" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <div className="bg-black/60 rounded-full p-2 hover:bg-black/80 transition">
+                      <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+                <div className="w-full h-full bg-black flex items-center justify-center text-white">
+                  <div className="bg-black/60 rounded-full p-2">
+                    <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
               )}
             </div>
           ))}
@@ -901,25 +1165,68 @@ const PostsPage = () => {
     if (total === 3) {
       return (
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="col-span-2 aspect-[16/9] overflow-hidden rounded-2xl shadow-sm">
+          <div 
+            onClick={(e) => {
+              stop(e);
+              navigate(`/react-app/Post/${post.id}`);
+            }}
+            className="col-span-2 aspect-[16/9] overflow-hidden rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+          >
             {media[0].type === "image" ? (
               <img src={media[0].src} alt={`post-${post.id}-img-0`} className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
             ) : media[0].thumb ? (
-              <img src={media[0].thumb} alt="video-thumb" className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
+              <div className="relative w-full h-full">
+                <img src={media[0].thumb} alt="video-thumb" className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <div className="bg-black/60 rounded-full p-2 hover:bg-black/80 transition">
+                    <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+              <div className="w-full h-full bg-black flex items-center justify-center text-white">
+                <div className="bg-black/60 rounded-full p-2">
+                  <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
             )}
           </div>
 
           <div className="flex flex-col gap-3">
             {media.slice(1, 3).map((m, i) => (
-              <div key={i} className="aspect-square overflow-hidden rounded-2xl shadow-sm">
+              <div 
+                key={i} 
+                onClick={(e) => {
+                  stop(e);
+                  navigate(`/react-app/Post/${post.id}`);
+                }}
+                className="aspect-square overflow-hidden rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+              >
                 {m.type === "image" ? (
                   <img src={m.src} alt={`post-${post.id}-img-${i + 1}`} className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
                 ) : m.thumb ? (
-                  <img src={m.thumb} alt="video-thumb" className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
+                  <div className="relative w-full h-full">
+                    <img src={m.thumb} alt="video-thumb" className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <div className="bg-black/60 rounded-full p-2 hover:bg-black/80 transition">
+                        <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+                  <div className="w-full h-full bg-black flex items-center justify-center text-white">
+                    <div className="bg-black/60 rounded-full p-2">
+                      <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
@@ -932,7 +1239,14 @@ const PostsPage = () => {
       return (
         <div className="mt-4 grid grid-cols-2 gap-3">
           {media.slice(0, 4).map((m, i) => (
-            <div key={i} className="aspect-square overflow-hidden rounded-2xl shadow-sm">
+            <div 
+              key={i} 
+              onClick={(e) => {
+                stop(e);
+                navigate(`/react-app/Post/${post.id}`);
+              }}
+              className="aspect-square overflow-hidden rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            >
               {m.type === "image" ? (
                 <img src={m.src} alt={`post-${post.id}-img-${i}`} className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
               ) : m.thumb ? (
@@ -953,13 +1267,35 @@ const PostsPage = () => {
           const isLast = i === showCount - 1;
           const remaining = total - showCount;
           return (
-            <div key={i} className="relative aspect-square overflow-hidden rounded-2xl shadow-sm">
+            <div 
+              key={i} 
+              onClick={(e) => {
+                stop(e);
+                navigate(`/react-app/Post/${post.id}`);
+              }}
+              className="relative aspect-square overflow-hidden rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            >
               {m.type === "image" ? (
                 <img src={m.src} alt={`post-${post.id}-img-${i}`} className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
               ) : m.thumb ? (
-                <img src={m.thumb} alt="video-thumb" className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
+                <div className="relative w-full h-full">
+                  <img src={m.thumb} alt="video-thumb" className="w-full h-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <div className="bg-black/60 rounded-full p-2 hover:bg-black/80 transition">
+                      <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <div className="w-full h-full bg-black flex items-center justify-center text-white">Video</div>
+                <div className="w-full h-full bg-black flex items-center justify-center text-white">
+                  <div className="bg-black/60 rounded-full p-2">
+                    <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
               )}
 
               {isLast && remaining > 0 && (
@@ -976,14 +1312,131 @@ const PostsPage = () => {
 
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
-        <div className="w-full max-w-4xl px-4">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-slate-200 rounded w-1/3" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="h-64 bg-slate-200 rounded-2xl" />
-              <div className="h-64 bg-slate-200 rounded-2xl" />
-            </div>
+      <div className="min-h-screen bg-slate-50">
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Sidebar Skeleton */}
+            <aside className="lg:col-span-3 order-2 lg:order-1">
+              <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4 animate-pulse">
+                {/* Popular Tags Skeleton */}
+                <div className="h-6 bg-slate-200 rounded w-32 mb-4"></div>
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-slate-200 rounded-lg"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-slate-200 rounded w-24 mb-2"></div>
+                        <div className="h-3 bg-slate-200 rounded w-16"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Followers Skeleton */}
+                <div className="h-6 bg-slate-200 rounded w-32 mt-6 mb-4"></div>
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-slate-200 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-slate-200 rounded w-20 mb-2"></div>
+                        <div className="h-3 bg-slate-200 rounded w-28"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+
+            {/* Main Content Skeleton */}
+            <section className="lg:col-span-9 order-1 lg:order-2 space-y-6">
+              {/* Search Bar Skeleton */}
+              <div className="flex items-center gap-3 mb-4 animate-pulse">
+                <div className="flex-1 h-12 bg-slate-200 rounded-full"></div>
+                <div className="w-12 h-12 bg-slate-200 rounded-full"></div>
+              </div>
+
+              {/* Create Post Input Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm p-6 animate-pulse">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-slate-200 rounded-full"></div>
+                  <div className="flex-1 h-12 bg-slate-200 rounded-full"></div>
+                </div>
+                <div className="flex items-center justify-around gap-4 pt-4 border-t border-gray-200">
+                  <div className="h-10 bg-slate-200 rounded-lg flex-1"></div>
+                  <div className="h-10 bg-slate-200 rounded-lg flex-1"></div>
+                  <div className="h-10 bg-slate-200 rounded-lg flex-1"></div>
+                </div>
+              </div>
+
+              {/* Posts Skeleton */}
+              <div className="space-y-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-white rounded-3xl shadow-md p-6 animate-pulse">
+                    {/* Post Header */}
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 bg-slate-200 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-5 bg-slate-200 rounded w-32 mb-2"></div>
+                        <div className="h-3 bg-slate-200 rounded w-24"></div>
+                      </div>
+                      <div className="h-6 bg-slate-200 rounded w-16"></div>
+                    </div>
+
+                    {/* Post Title & Content */}
+                    <div className="mb-4 space-y-3">
+                      <div className="h-6 bg-slate-200 rounded w-3/4"></div>
+                      <div className="h-4 bg-slate-200 rounded w-full"></div>
+                      <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                    </div>
+
+                    {/* Post Media Grid Skeleton */}
+                    <div className="mb-4">
+                      {i % 2 === 0 ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="aspect-square bg-slate-200 rounded-2xl"></div>
+                          <div className="aspect-square bg-slate-200 rounded-2xl"></div>
+                        </div>
+                      ) : (
+                        <div className="w-full aspect-[16/9] bg-slate-200 rounded-2xl"></div>
+                      )}
+                    </div>
+
+                    {/* Tags Skeleton */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="h-6 bg-slate-200 rounded-full w-20"></div>
+                      <div className="h-6 bg-slate-200 rounded-full w-24"></div>
+                      <div className="h-6 bg-slate-200 rounded-full w-16"></div>
+                    </div>
+
+                    {/* Stats Skeleton */}
+                    <div className="flex items-center justify-around gap-4 py-2 px-3 bg-gray-50 rounded-lg">
+                      <div className="h-5 bg-slate-200 rounded w-16"></div>
+                      <div className="h-5 bg-slate-200 rounded w-20"></div>
+                      <div className="h-5 bg-slate-200 rounded w-12"></div>
+                    </div>
+
+                    {/* Actions Skeleton */}
+                    <div className="flex items-center justify-around gap-4 pt-4 mt-4 border-t border-gray-200">
+                      <div className="h-10 bg-slate-200 rounded-lg flex-1"></div>
+                      <div className="h-10 bg-slate-200 rounded-lg flex-1"></div>
+                      <div className="h-10 bg-slate-200 rounded-lg flex-1"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Loading Indicator */}
+              <div className="flex items-center justify-center py-8">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                  </div>
+                  <p className="text-sm text-slate-600 font-medium">جاري تحميل المنشورات...</p>
+                  <p className="text-xs text-slate-400">يرجى الانتظار قليلاً</p>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -1201,7 +1654,7 @@ const PostsPage = () => {
             </div>
           </aside>
 
-          <section className="lg:col-span-5 space-y-6 order-1 lg:order-2 max-w-3xl mx-auto lg:ml-2">
+          <section className="lg:col-span-5 space-y-6 order-1 lg:order-2 max-w-3xl mx-auto lg:ml-2 w-full">
             {/* Search Bar and Filter */}
             <div className="flex items-center gap-3 mb-4 max-w-3xl mx-auto">
               {/* Search Bar */}
@@ -1330,20 +1783,27 @@ const PostsPage = () => {
 
               {/* Bottom section with action buttons */}
               <div className="flex items-center justify-around">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowCreatePostModal(true); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex-1 justify-center"
-                >
-                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-700">بث مباشر</span>
-                </button>
                 <input
                   type="file"
-                  ref={fileInputRef}
+                  ref={imageInputRef}
                   multiple
-                  accept="image/*,video/*"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files);
+                    if (files.length > 0) {
+                      setPendingFiles(files);
+                      setShowCreatePostModal(true);
+                    }
+                    // Reset input
+                    e.target.value = '';
+                  }}
+                />
+                <input
+                  type="file"
+                  ref={videoInputRef}
+                  multiple
+                  accept="video/*"
                   style={{ display: 'none' }}
                   onChange={(e) => {
                     const files = Array.from(e.target.files);
@@ -1358,30 +1818,61 @@ const PostsPage = () => {
                 <button
                   onClick={(e) => { 
                     e.stopPropagation(); 
-                    fileInputRef.current?.click();
+                    imageInputRef.current?.click();
                   }}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex-1 justify-center"
                 >
                   <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                   </svg>
-                  <span className="text-sm font-medium text-gray-700">صور/فيديو</span>
+                  <span className="text-sm font-medium text-gray-700">صورة</span>
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setShowCreatePostModal(true); }}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    videoInputRef.current?.click();
+                  }}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex-1 justify-center"
                 >
-                  <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.536a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z" clipRule="evenodd" />
+                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
                   </svg>
-                  <span className="text-sm font-medium text-gray-700">مشاعر/أنشطة</span>
+                  <span className="text-sm font-medium text-gray-700">فيديو</span>
                 </button>
               </div>
             </div>
 
-            {displayedPosts?.length === 0 && <p className="text-slate-600">No posts found.</p>}
+            {!loading && displayedPosts?.length === 0 && (
+              <article className="group bg-white rounded-3xl shadow-md hover:shadow-xl transition-transform transform hover:-translate-y-1 duration-200 overflow-hidden border border-transparent w-full">
+                <div className="p-5 md:p-6">
+                  <div className="flex flex-col items-center justify-center py-16 px-4">
+                    <div className="text-6xl mb-4">📭</div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">لا يوجد بوستات</h3>
+                    <p className="text-gray-500 text-center max-w-md">
+                      {serverFilterApplied 
+                        ? "لم يتم العثور على بوستات تطابق معايير البحث المحددة." 
+                        : "لا توجد بوستات متاحة للعرض حالياً."}
+                    </p>
+                    {serverFilterApplied && (
+                      <button
+                        onClick={resetFilters}
+                        className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                      >
+                        إعادة ضبط الفلاتر
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            )}
 
             {displayedPosts?.map((post) => {
+              // كل منشور يحتوي على:
+              // - mostCommonType: معرف التاغ الأكثر شيوعاً
+              // - secondCommonType: معرف التاغ الثاني الأكثر شيوعاً
+              // - thirdCommonType: معرف التاغ الثالث الأكثر شيوعاً
+              // يمكن استخدامها لعرض معلومات إضافية أو ربطها بـ GET /api/posts/tags
+              
               const likeState = likes[post.id] || {
                 count: post.numberLike ?? 0,
                 isLiked: parseIsLiked(post.isLikedIt),
@@ -1432,12 +1923,53 @@ const PostsPage = () => {
                           )}
                         </div>
 
-                        <div className="mt-3">
-                          {post.title && <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-2 leading-tight">{post.title}</h2>}
-
-                          {post.content && (
-                            <div className="text-slate-700 text-sm md:text-base leading-relaxed max-w-none prose prose-sm" onClick={(e) => stop(e)} dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }} />
+                        <div className="mt-3 text-right" dir="rtl">
+                          {post.title && (
+                            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-2 leading-tight text-right">
+                              {post.title}
+                            </h2>
                           )}
+
+                          {post.content && (() => {
+                            const sanitizedContent = sanitizeHtml(post.content);
+                            // Get plain text length (strip HTML tags)
+                            const getPlainTextLength = (html) => {
+                              if (!html) return 0;
+                              const text = html.replace(/<[^>]*>/g, '').trim();
+                              return text.length;
+                            };
+                            const contentLength = getPlainTextLength(post.content);
+                            const isExpanded = expandedPosts[post.id];
+                            const shouldShowMore = contentLength > 200;
+
+                            return (
+                              <div className="text-right" dir="rtl">
+                                <div
+                                  className={`text-slate-700 text-sm md:text-base leading-relaxed max-w-none prose prose-sm text-right ${!isExpanded && shouldShowMore ? 'line-clamp-3' : ''}`}
+                                  onClick={(e) => stop(e)}
+                                  dir="rtl"
+                                  style={{ textAlign: 'right' }}
+                                  dangerouslySetInnerHTML={{ 
+                                    __html: sanitizedContent 
+                                  }}
+                                />
+                                {shouldShowMore && (
+                                  <button
+                                    onClick={(e) => {
+                                      stop(e);
+                                      setExpandedPosts(prev => ({
+                                        ...prev,
+                                        [post.id]: !isExpanded
+                                      }));
+                                    }}
+                                    className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm font-medium underline"
+                                  >
+                                    {isExpanded ? 'عرض أقل' : 'المزيد...'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1451,6 +1983,44 @@ const PostsPage = () => {
                         ))}
                       </div>
                     )}
+
+                    {/* Stats under tags - Always show */}
+                    <div className={`flex items-center justify-around gap-4 py-2 px-3 bg-gray-50 rounded-lg border border-gray-100 ${post.postTags?.length > 0 ? 'mt-3' : 'mt-4'}`} dir="rtl">
+                      <div 
+                        onClick={(e) => {
+                          stop(e);
+                          // Open liked users modal
+                          openLikedUsersModal(post.id);
+                        }}
+                        className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer hover:text-indigo-600 transition"
+                      >
+                        <span className="text-lg">♥</span>
+                        <span>{likeState.count}</span>
+                      </div>
+                      <div 
+                        onClick={(e) => {
+                          stop(e);
+                          // Open comments modal
+                          openCommentsModal(e, post.id);
+                        }}
+                        className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer hover:text-indigo-600 transition"
+                      >
+                        <span className="text-lg">💬</span>
+                        <span>{post.numberComment !== undefined && post.numberComment !== null ? post.numberComment : (Array.isArray(post.comments) ? post.comments.length : 0)}</span>
+                      </div>
+                      <div 
+                        onClick={(e) => {
+                          stop(e);
+                          // Copy post link
+                          navigator.clipboard?.writeText(window.location.origin + `/react-app/Post/${post.id}`);
+                          alert("رابط البوست تم نسخه إلى الحافظة");
+                        }}
+                        className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer hover:text-indigo-600 transition"
+                      >
+                        <span className="text-lg">↗</span>
+                        <span>0</span>
+                      </div>
+                    </div>
 
                     <div className="mt-5 border-t border-slate-100 pt-4 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
@@ -1502,16 +2072,40 @@ const PostsPage = () => {
                   {!popularLoading && !popularError && popularTags.length === 0 && (
                     <div className="text-slate-400 text-sm text-center py-4">لا توجد بيانات شائعة حالياً.</div>
                   )}
-                  {!popularLoading && popularTags.map((t) => (
+                  {!popularLoading && popularTags.map((t) => {
+                    // الحصول على tagId بشكل صحيح
+                    const tagId = t.tagId || t.id || t.tag?.id;
+                    if (!tagId) {
+                      console.warn("⚠️ Tag missing ID:", t);
+                      return null;
+                    }
+                    
+                    return (
                     <div
-                      key={t.tagId ?? t.tagId}
+                      key={tagId}
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`/react-app/Algorithms/${t.tagId}`)}
+                      onClick={() => {
+                        console.log(`🔄 Navigating to Dashboard with algorithms tab and tagId: ${tagId}`);
+                        // الانتقال إلى dashboard مع tab algorithms وفتح التاغ المحدد
+                        navigate("/dashboard", { 
+                          state: { 
+                            activeTab: "algorithms",
+                            expandedTagId: Number(tagId)
+                          } 
+                        });
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          navigate(`/react-app/Algorithms/${t.tagId}`);
+                          console.log(`🔄 Navigating to Dashboard with algorithms tab and tagId: ${tagId}`);
+                          // الانتقال إلى dashboard مع tab algorithms وفتح التاغ المحدد
+                          navigate("/dashboard", { 
+                            state: { 
+                              activeTab: "algorithms",
+                              expandedTagId: Number(tagId)
+                            } 
+                          });
                         }
                       }}
                       className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 border border-transparent hover:shadow-sm group"
@@ -1527,7 +2121,7 @@ const PostsPage = () => {
                         e.currentTarget.style.borderColor = "transparent";
                       }}
                     >
-                      <span className="text-sm font-semibold transition" style={{ color: "#007C89" }} onMouseEnter={(e) => e.currentTarget.style.color = "#005a64"} onMouseLeave={(e) => e.currentTarget.style.color = "#007C89"}>#{t.tagName}</span>
+                      <span className="text-sm font-semibold transition" style={{ color: "#007C89" }} onMouseEnter={(e) => e.currentTarget.style.color = "#005a64"} onMouseLeave={(e) => e.currentTarget.style.color = "#007C89"}>#{t.tagName || t.name}</span>
                       <span 
                         className="text-xs font-medium px-2 py-1 rounded-full bg-white border transition"
                         style={{ 
@@ -1544,7 +2138,8 @@ const PostsPage = () => {
                         {t.numberOfUsed ?? "0"}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1569,7 +2164,13 @@ const PostsPage = () => {
       )}
 
       {/* Comments Modal */}
-      {commentsModalPostId != null && <CommentsModal postId={commentsModalPostId} onClose={closeCommentsModal} />}
+      {commentsModalPostId != null && (
+        <CommentsModal 
+          postId={commentsModalPostId} 
+          onClose={closeCommentsModal}
+          onCommentCountChanged={updatePostCommentCount}
+        />
+      )}
 
       {/* Delete confirmation modal */}
       {deleteConfirmPostId != null && (
@@ -1651,13 +2252,16 @@ const PostsPage = () => {
         onClose={() => {
           setShowCreatePostModal(false);
           setPendingFiles(null);
+          setEditPostData(null); // إعادة تعيين بيانات التعديل
         }}
         onPostCreated={() => {
-          // Refresh posts after creation
+          // Refresh posts after creation/update
           getPosts();
+          setEditPostData(null); // إعادة تعيين بيانات التعديل
           setPendingFiles(null);
         }}
         initialFiles={pendingFiles}
+        editPostData={editPostData}
       />
     </div>
   );

@@ -4,7 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { selectAuthSession, clearCredentials } from "../../store/authSlice";
 import { getAllGeneralInfoUser } from "../../Service/ProblemService";
 import { getUserById } from "../../Service/userService";
-import { checkFollowStatus, doFollow, doUnfollow, fetchBellStatus, saveBellPreferences, disableBellQuick } from "../../Service/followService";
+import { checkFollowStatus, doFollow, doUnfollow } from "../../Service/followService";
+import { getBellActivationStatus, saveBellActivation, getBellFollowersCount } from "../../Service/bellActivationService";
 import { fetchNotificationsByUser, getUnreadNotificationsCount } from "../../Service/NotificationServices";
 import EditProfile from "./EditProfile";
 import LandingNav from "../../components/LandingNav";
@@ -124,6 +125,7 @@ const UserProfile = () => {
   const [bellEmailChecked, setBellEmailChecked] = useState(true);
   const [bellAppChecked, setBellAppChecked] = useState(true);
   const [isOnline, setIsOnline] = useState(false); // حالة المستخدم (online/offline)
+  const [bellFollowersCount, setBellFollowersCount] = useState(0); // عدد المهتمين بالإشعارات
 
   // States للهيدر (من Dashboard)
   const dispatch = useDispatch();
@@ -225,9 +227,20 @@ const UserProfile = () => {
 
         // جلب بيانات المستخدم المعروض
         if (displayedUserId) {
-          const userData = await getUserById(displayedUserId);
-          console.log("👤 User Stats:", userData);
-          setUserStats(userData);
+          try {
+            const userData = await getUserById(displayedUserId);
+            console.log("👤 User Stats:", userData);
+            
+            // معالجة البيانات - قد تكون في responseUserDTO أو مباشرة
+            if (userData) {
+              setUserStats(userData);
+            } else {
+              console.warn("⚠️ No user data returned from API");
+            }
+          } catch (userError) {
+            console.error("❌ Error fetching user data:", userError);
+            // لا نرمي الخطأ، فقط نسجله ونستمر
+          }
           
           // جلب حالة المتابعة والجرس إذا لم يكن المستخدم نفسه
           if (!isOwnProfile && currentUserId) {
@@ -235,9 +248,30 @@ const UserProfile = () => {
             setIsFollowing(followStatus);
             
             if (followStatus) {
-              const bellData = await fetchBellStatus(currentUserId, displayedUserId);
-              setBellActive(!!bellData);
+              try {
+                const bellData = await getBellActivationStatus(currentUserId, displayedUserId);
+                if (bellData) {
+                  setBellActive(bellData.isActivatedSendEmail || bellData.isActivatedSendAppNotification);
+                  setBellEmailChecked(bellData.isActivatedSendEmail || false);
+                  setBellAppChecked(bellData.isActivatedSendAppNotification || false);
+                } else {
+                  setBellActive(false);
+                }
+              } catch (err) {
+                console.error("Error fetching bell status:", err);
+                setBellActive(false);
+              }
             }
+          }
+          
+          // جلب عدد المهتمين بالإشعارات (لجميع المستخدمين)
+          try {
+            const bellCount = await getBellFollowersCount(displayedUserId);
+            setBellFollowersCount(bellCount);
+            console.log("🔔 Bell followers count:", bellCount);
+          } catch (err) {
+            console.error("Error fetching bell followers count:", err);
+            setBellFollowersCount(0);
           }
           
           // جلب حالة المستخدم (online/offline) - يمكن إضافة API لهذا لاحقاً
@@ -256,17 +290,30 @@ const UserProfile = () => {
   const profile = useMemo(() => {
     // إذا كان هناك userStats (بيانات المستخدم المعروض)، استخدمها
     if (userStats) {
+      // التحقق من وجود responseUserDTO
+      const userInfo = userStats.responseUserDTO || userStats;
+      
       return {
-        id: userStats.id ?? displayedUserId ?? "-",
-        email: userStats.email ?? "--",
-        userName: userStats.userName ?? "مستخدم عرب كودرز",
-        imageUrl: userStats.imageUrl ?? "https://via.placeholder.com/120x120.png?text=Profile",
-        registerAt: userStats.registerAt ?? null,
-        role: userStats.role ?? "User",
-        country: userStats.country ?? null,
-        acceptanceRate: userStats.acceptanceRate ?? 0,
+        id: userInfo.id ?? userStats.id ?? displayedUserId ?? "-",
+        email: userInfo.email ?? userStats.email ?? "--",
+        userName: userInfo.userName ?? userStats.userName ?? "مستخدم عرب كودرز",
+        imageUrl: userInfo.imageUrl ?? userInfo.imageURL ?? userStats.imageUrl ?? userStats.imageURL ?? "https://via.placeholder.com/120x120.png?text=Profile",
+        registerAt: userInfo.registerAt ?? userStats.registerAt ?? null,
+        role: userInfo.role ?? userStats.role ?? "User",
+        country: userInfo.country ?? userStats.country ?? null,
+        // حساب totalProblemsSolved من مجموع المشاكل المحلولة
+        totalProblemsSolved: userStats.totalProblemsSolved ?? 
+          ((userStats.easyProblemsSolvedCount ?? 0) + 
+           (userStats.mediumProblemsSolvedCount ?? 0) + 
+           (userStats.hardProblemsSolvedCount ?? 0)),
+        // حساب acceptanceRate إذا لم يكن موجوداً
+        acceptanceRate: userStats.acceptanceRate ?? 
+          (userStats.totalSubmissions > 0 
+            ? Math.round((((userStats.easyProblemsSolvedCount ?? 0) + 
+                           (userStats.mediumProblemsSolvedCount ?? 0) + 
+                           (userStats.hardProblemsSolvedCount ?? 0)) / userStats.totalSubmissions) * 100) 
+            : 0),
         totalSubmissions: userStats.totalSubmissions ?? 0,
-        totalProblemsSolved: userStats.totalProblemsSolved ?? 0,
         easyProblemsSolvedCount: userStats.easyProblemsSolvedCount ?? 0,
         mediumProblemsSolvedCount: userStats.mediumProblemsSolvedCount ?? 0,
         hardProblemsSolvedCount: userStats.hardProblemsSolvedCount ?? 0,
@@ -274,7 +321,7 @@ const UserProfile = () => {
         maxStreak: userStats.maxStreak ?? 0,
         following: userStats.following ?? 0,
         followers: userStats.followers ?? 0,
-        universityName: userStats.universityName ?? null,
+        universityName: userInfo.universityName ?? userStats.universityName ?? null,
         tagSolvedCounts: userStats.tagSolvedCounts ?? [],
       };
     }
@@ -286,7 +333,7 @@ const UserProfile = () => {
         id: user.id ?? "-",
         email: user.email ?? session.email ?? "--",
         userName: user.userName ?? session.username ?? "مستخدم عرب كودرز",
-        imageUrl: user.imageUrl ?? "https://via.placeholder.com/120x120.png?text=Profile",
+        imageUrl: user.imageUrl ?? user.imageURL ?? "https://via.placeholder.com/120x120.png?text=Profile",
         registerAt: user.registerAt ?? null,
         role: user.role ?? session.role ?? "User",
         country: user.country ?? null,
@@ -305,14 +352,35 @@ const UserProfile = () => {
       };
     }
     
-    return null;
+    // إذا لم يكن هناك بيانات، نعيد بيانات افتراضية بدلاً من null
+    return {
+      id: displayedUserId ?? "-",
+      email: "--",
+      userName: "مستخدم عرب كودرز",
+      imageUrl: "https://via.placeholder.com/120x120.png?text=Profile",
+      registerAt: null,
+      role: "User",
+      country: null,
+      acceptanceRate: 0,
+      totalSubmissions: 0,
+      totalProblemsSolved: 0,
+      easyProblemsSolvedCount: 0,
+      mediumProblemsSolvedCount: 0,
+      hardProblemsSolvedCount: 0,
+      streakDay: 0,
+      maxStreak: 0,
+      following: 0,
+      followers: 0,
+      universityName: null,
+      tagSolvedCounts: [],
+    };
   }, [session, userStats, displayedUserId, isOwnProfile]);
 
   // استخدام الأرقام من الـ API
-  const EASY_TOTAL = generalInfo?.contEasyProblems ?? 1954;
-  const MEDIUM_TOTAL = generalInfo?.counMidumProblems ?? 1954;
-  const HARD_TOTAL = generalInfo?.countHardProblems ?? 1954;
-  const TOTAL_PROBLEMS = generalInfo?.countProblems ?? 38542;
+  const EASY_TOTAL = generalInfo?.contEasyProblems ?? generalInfo?.countEasyProblems ?? 0;
+  const MEDIUM_TOTAL = generalInfo?.counMidumProblems ?? generalInfo?.countMediumProblems ?? 0;
+  const HARD_TOTAL = generalInfo?.countHardProblems ?? 0;
+  const TOTAL_PROBLEMS = generalInfo?.countProblems ?? 0;
 
   // Trigger animation on mount or when profile data changes
   useEffect(() => {
@@ -334,35 +402,56 @@ const UserProfile = () => {
   const animatedFollowers = useCountUp(profile?.followers ?? 0, 2000, hasAnimated);
   const animatedFollowing = useCountUp(profile?.following ?? 0, 2000, hasAnimated);
   const animatedAcceptanceRate = useCountUp(Math.round(profile?.acceptanceRate ?? 0), 2000, hasAnimated);
+  const animatedBellFollowers = useCountUp(bellFollowersCount, 2000, hasAnimated);
 
   // معالجة المتابعة/إلغاء المتابعة
   const handleFollowToggle = async () => {
-    if (!currentUserId || !displayedUserId || followBusy || isOwnProfile) return;
+    if (!currentUserId || !displayedUserId || followBusy || isOwnProfile) {
+      console.warn("⚠️ Cannot toggle follow:", { currentUserId, displayedUserId, followBusy, isOwnProfile });
+      return;
+    }
     
     setFollowBusy(true);
     try {
       if (isFollowing) {
+        console.log("🔄 Unfollowing user:", { followerId: currentUserId, followId: displayedUserId });
         await doUnfollow(currentUserId, displayedUserId);
         setIsFollowing(false);
         setBellActive(false);
+        setBellEmailChecked(false);
+        setBellAppChecked(false);
         if (userStats) {
           setUserStats(prev => ({ ...prev, followers: Math.max(0, (prev?.followers ?? 0) - 1) }));
         }
+        alert("تم إلغاء المتابعة بنجاح");
       } else {
+        console.log("➕ Following user:", { followerId: currentUserId, followId: displayedUserId });
         await doFollow(currentUserId, displayedUserId);
         setIsFollowing(true);
         if (userStats) {
           setUserStats(prev => ({ ...prev, followers: (prev?.followers ?? 0) + 1 }));
         }
+        alert("تم المتابعة بنجاح");
+        
         // بعد المتابعة، جلب حالة الجرس
-        const bellData = await fetchBellStatus(currentUserId, displayedUserId);
-        if (bellData) {
-          setBellActive(true);
+        try {
+          const bellData = await getBellActivationStatus(currentUserId, displayedUserId);
+          if (bellData) {
+            setBellActive(bellData.isActivatedSendEmail || bellData.isActivatedSendAppNotification);
+            setBellEmailChecked(bellData.isActivatedSendEmail || false);
+            setBellAppChecked(bellData.isActivatedSendAppNotification || false);
+          }
+        } catch (err) {
+          console.error("Error fetching bell status after follow:", err);
+          // لا نعرض خطأ هنا لأن المتابعة نجحت
         }
       }
     } catch (err) {
-      console.error("Follow toggle error:", err);
-      alert("حدث خطأ أثناء تنفيذ العملية");
+      console.error("❌ Follow toggle error:", err);
+      
+      // عرض رسالة خطأ مفصلة
+      const errorMessage = err?.message || "حدث خطأ أثناء تنفيذ العملية";
+      alert(`فشل ${isFollowing ? "إلغاء المتابعة" : "المتابعة"}: ${errorMessage}`);
     } finally {
       setFollowBusy(false);
     }
@@ -381,8 +470,10 @@ const UserProfile = () => {
       // إيقاف الجرس
       setBellBusy(true);
       try {
-        await disableBellQuick(currentUserId, displayedUserId);
+        await saveBellActivation(currentUserId, displayedUserId, false, false);
         setBellActive(false);
+        setBellEmailChecked(false);
+        setBellAppChecked(false);
       } catch (err) {
         console.error("Disable bell error:", err);
         alert("فشل إيقاف الإشعارات");
@@ -391,11 +482,17 @@ const UserProfile = () => {
       }
     } else {
       // فتح نافذة الإعدادات
-      const existing = await fetchBellStatus(currentUserId, displayedUserId);
-      if (existing && typeof existing === "object") {
-        setBellEmailChecked(Boolean(existing.isActivatedSendEmail));
-        setBellAppChecked(Boolean(existing.isActivatedSendAppNotification));
-      } else {
+      try {
+        const existing = await getBellActivationStatus(currentUserId, displayedUserId);
+        if (existing) {
+          setBellEmailChecked(existing.isActivatedSendEmail || false);
+          setBellAppChecked(existing.isActivatedSendAppNotification || false);
+        } else {
+          setBellEmailChecked(true);
+          setBellAppChecked(true);
+        }
+      } catch (err) {
+        console.error("Error fetching bell status:", err);
         setBellEmailChecked(true);
         setBellAppChecked(true);
       }
@@ -405,21 +502,78 @@ const UserProfile = () => {
 
   // حفظ إعدادات الجرس
   const handleSaveBellPreferences = async () => {
-    if (!currentUserId || !displayedUserId || bellBusy) return;
+    if (!currentUserId || !displayedUserId || bellBusy) {
+      console.warn("⚠️ Cannot save bell preferences:", { currentUserId, displayedUserId, bellBusy });
+      return;
+    }
+    
+    if (isOwnProfile) {
+      alert("لا يمكنك تفعيل الإشعارات لنفسك");
+      return;
+    }
+    
+    if (!isFollowing) {
+      alert("يجب متابعته أولاً لتفعيل الإشعارات");
+      return;
+    }
     
     setBellBusy(true);
     try {
-      await saveBellPreferences(
+      console.log("💾 Saving bell preferences:", {
+        followerId: currentUserId,
+        followedId: displayedUserId,
+        email: bellEmailChecked,
+        app: bellAppChecked,
+      });
+      
+      await saveBellActivation(
         currentUserId,
         displayedUserId,
         bellEmailChecked,
         bellAppChecked
       );
-      setBellActive(true);
+      
+      setBellActive(bellEmailChecked || bellAppChecked);
       setShowBellModal(false);
+      
+      // تحديث عدد المهتمين بعد الحفظ
+      try {
+        const updatedCount = await getBellFollowersCount(displayedUserId);
+        setBellFollowersCount(updatedCount);
+      } catch (err) {
+        console.error("Error updating bell followers count:", err);
+      }
+      
+      // إظهار رسالة نجاح
+      alert("تم حفظ إعدادات الإشعارات بنجاح");
     } catch (err) {
-      console.error("Save bell preferences error:", err);
-      alert("فشل حفظ إعدادات الإشعارات");
+      console.error("❌ Save bell preferences error:", err);
+      console.error("Error details:", {
+        status: err?.response?.status,
+        statusText: err?.response?.statusText,
+        data: err?.response?.data,
+        message: err?.message,
+      });
+      
+      // عرض رسالة خطأ مفصلة
+      let errorMessage = "فشل حفظ إعدادات الإشعارات";
+      
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.response?.data?.title) {
+        errorMessage = err.response.data.title;
+      } else if (typeof err?.response?.data === "string") {
+        errorMessage = err.response.data;
+      }
+      
+      // إذا كانت الرسالة تحتوي على "contest"، قد تكون رسالة خطأ خاطئة من الـ API
+      if (errorMessage.toLowerCase().includes("contest")) {
+        errorMessage = "حدث خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً";
+      }
+      
+      alert(`فشل حفظ إعدادات الإشعارات: ${errorMessage}`);
     } finally {
       setBellBusy(false);
     }
@@ -566,13 +720,17 @@ const UserProfile = () => {
 
   if (loading) {
     // التحقق من isOwnProfile بناءً على profileUserId و currentUserId
-    const isOwnProfileLoading = currentUserId && profileUserId && Number(profileUserId) === Number(currentUserId);
+    // نعرض الهيدر فقط إذا:
+    // 1. profileUserId موجود في الرابط (يعني بروفايل مستخدم آخر)
+    // 2. currentUserId متوفر (للتأكد من أننا لسنا في حالة غير محددة)
+    // 3. profileUserId مختلف عن currentUserId (ليس بروفايل المستخدم الحالي)
+    const shouldShowHeader = profileUserId && currentUserId && Number(profileUserId) !== Number(currentUserId);
     const unreadCountLoading = notificationData?.unreadCount || 0;
     
     return (
       <div className="profile-page profile-page--loading">
-        {/* Header أثناء التحميل - يظهر فقط إذا لم يكن صاحب البروفايل */}
-        {!isOwnProfileLoading && (
+        {/* Header أثناء التحميل - يظهر فقط إذا كان profileUserId موجوداً وليس بروفايل المستخدم الحالي */}
+        {shouldShowHeader && (
           <header className="landing-header landing-header--auth dashboard-home__header">
             <LandingNav
               className="landing-nav--with-divider"
@@ -628,10 +786,6 @@ const UserProfile = () => {
         </div>
       </div>
     );
-  }
-
-  if (!profile) {
-    return <div className="profile-empty-state">لا توجد بيانات مستخدم لعرضها حالياً.</div>;
   }
 
   const formatDate = (value) =>
@@ -992,6 +1146,12 @@ const UserProfile = () => {
                 <img src={followIcon} alt="يتابع" className="stat-card-icon" />
                 <div className="stat-card-label">يتابع</div>
                 <div className="stat-card-value">{animatedFollowing}</div>
+              </div>
+              
+              <div className="stat-card stat-card--purple">
+                <span className="stat-card-icon" style={{ fontSize: "2rem", display: "inline-block" }}>🔔</span>
+                <div className="stat-card-label">المهتمون</div>
+                <div className="stat-card-value">{animatedBellFollowers}</div>
               </div>
             </div>
           </div>

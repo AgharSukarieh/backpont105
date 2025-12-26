@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { getProblemById } from "../../Service/ProblemService";
-import LoadingCartoon from "../Loading";
 import { useParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
+import { PageSkeleton } from "../../Components/SkeletonLoading";
 
 const ProblemDetail = () => {
   const { id } = useParams(); // رقم المشكلة من الرابط /problem/:id
@@ -32,7 +32,7 @@ const ProblemDetail = () => {
     fetchProblem();
   }, [id]);
 
-  if (loading) return <LoadingCartoon />;
+  if (loading) return <PageSkeleton />;
 
   if (!problem) return <p>لا توجد بيانات للمشكلة.</p>;
 

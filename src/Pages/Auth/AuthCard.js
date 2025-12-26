@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../../Hook/UserContext";
-import { loginUser, verifyOtp, sendOtp, sendOtpForRestorePassword, restorePassword } from "../../Service/userService";
+import { loginUser, sendOtp, sendOtpForRestorePassword, restorePassword } from "../../Service/userService";
+import { verifyOtp } from "../../Service/authService";
 import "./Style/style.css";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../../store/authSlice";
@@ -190,7 +191,41 @@ const decodeJwt = (token) => {
   }
 };
 
-const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidEmail = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  
+  // Pattern أكثر مرونة - يدعم admin@admin
+  // يجب أن يحتوي على @ واسم مستخدم قبل @ واسم نطاق بعد @
+  const emailPattern = /^[^\s@]+@[^\s@]+$/;
+  
+  // التحقق الأساسي: يجب أن يحتوي على @ وليس فارغاً
+  if (!emailPattern.test(email.trim())) {
+    return false;
+  }
+  
+  // التحقق من أن هناك نص قبل وبعد @
+  const parts = email.trim().split('@');
+  if (parts.length !== 2) {
+    return false;
+  }
+  
+  const [localPart, domainPart] = parts;
+  
+  // يجب أن يكون هناك نص قبل @ (local part)
+  if (!localPart || localPart.length === 0) {
+    return false;
+  }
+  
+  // يجب أن يكون هناك نص بعد @ (domain part)
+  // يمكن أن يكون domain بدون . (مثل admin@admin)
+  if (!domainPart || domainPart.length === 0) {
+    return false;
+  }
+  
+  // إذا كان domain يحتوي على . فهو بريد عادي
+  // إذا لم يكن يحتوي على . فهو بريد مثل admin@admin (مقبول)
+  return true;
+};
 
 const AuthCard = ({
   initialMode = "login",
@@ -234,6 +269,11 @@ const AuthCard = ({
   const [otpLoading, setOtpLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [pendingSignupData, setPendingSignupData] = useState(null);
+  
+  // Login OTP states
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [loginOtp, setLoginOtp] = useState("");
+  const [pendingLoginData, setPendingLoginData] = useState(null);
 
   // Forgot Password states
   const [showForgotPasswordEmailModal, setShowForgotPasswordEmailModal] = useState(false);
@@ -451,7 +491,7 @@ const AuthCard = ({
     }
   };
 
-  // إعادة إرسال OTP
+  // إعادة إرسال OTP للتسجيل
   const handleResendOtp = async () => {
     if (resendCooldown > 0 || !pendingSignupData) return;
 
@@ -467,6 +507,168 @@ const AuthCard = ({
       showAlert(error.message || "خطأ في إعادة الإرسال", "error");
     } finally {
       setOtpLoading(false);
+    }
+  };
+
+  // التحقق من OTP عند تسجيل الدخول
+  const handleVerifyLoginOtp = async () => {
+    if (!loginOtp.trim()) {
+      showAlert("الرجاء إدخال رمز التحقق", "error");
+      return;
+    }
+
+    if (!pendingLoginData) {
+      showAlert("خطأ في البيانات المؤقتة", "error");
+      return;
+    }
+
+    setIsLoginSubmitting(true);
+    try {
+      // 1. التحقق من OTP
+      const verifyRes = await verifyOtp(pendingLoginData.email.trim(), loginOtp.trim());
+      const isSuccess =
+        (typeof verifyRes === "string" && /success/i.test(verifyRes)) ||
+        verifyRes?.success === true ||
+        verifyRes?.isVerified === true ||
+        verifyRes?.status === "success";
+
+      if (!isSuccess) {
+        showAlert("رمز التحقق غير صحيح", "error");
+        return;
+      }
+
+      // 2. إعادة محاولة تسجيل الدخول
+      const loginRes = await loginUser(pendingLoginData.email.trim(), pendingLoginData.password);
+      const responseUser = loginRes?.responseUserDTO ?? {};
+
+      if (!loginRes?.token) {
+        showAlert("فشل تسجيل الدخول بعد التحقق من OTP", "error");
+        return;
+      }
+
+      // 3. حفظ البيانات والانتقال
+      const tokenPayload = decodeJwt(loginRes.token);
+      const resolvedUserId =
+        responseUser.id ??
+        tokenPayload?.uid ??
+        tokenPayload?.sub ??
+        null;
+      const resolvedUserName =
+        responseUser.fullName ??
+        responseUser.userName ??
+        responseUser.name ??
+        pendingLoginData.email;
+      const resolvedUserEmail = responseUser.email ?? pendingLoginData.email;
+      
+      // التحقق من role من جميع الأماكن المحتملة
+      let resolvedRole = 
+        responseUser.role || 
+        responseUser.Role || 
+        loginRes?.role || 
+        loginRes?.Role || 
+        tokenPayload?.role ||
+        tokenPayload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+        "User";
+      
+      // Normalize role
+      if (resolvedRole) {
+        resolvedRole = String(resolvedRole).trim();
+        if (resolvedRole.toLowerCase() === "admin") {
+          resolvedRole = "Admin";
+        } else if (resolvedRole.toLowerCase() === "user") {
+          resolvedRole = "User";
+        }
+      }
+
+      const userContextValue = {
+        ...responseUser,
+        id: resolvedUserId ?? responseUser.id ?? Date.now(),
+        name: resolvedUserName,
+        email: resolvedUserEmail,
+        role: resolvedRole,
+      };
+
+      const sessionPayload = {
+        ...loginRes,
+        username: loginRes?.username ?? resolvedUserName,
+        email: loginRes?.email ?? resolvedUserEmail,
+        role: resolvedRole,
+        responseUserDTO: responseUser,
+        storedAt: new Date().toISOString(),
+      };
+
+      const enrichedUser = {
+        ...userContextValue,
+        session: sessionPayload,
+      };
+
+      setUser(enrichedUser);
+
+      const tokenExpiration = Date.now() + 1000 * 60 * 60;
+
+      if (resolvedUserId) {
+        localStorage.setItem("idUser", resolvedUserId);
+      }
+      
+      // حفظ role و userName في localStorage بشكل صريح
+      localStorage.setItem("role", resolvedRole);
+      localStorage.setItem("userName", resolvedUserName);
+
+      dispatch(
+        setCredentials({
+          token: loginRes.token,
+          tokenExpiration,
+          role: resolvedRole,
+          user: enrichedUser,
+          session: sessionPayload,
+        })
+      );
+
+      setOtpRequired(false);
+      setLoginOtp("");
+      setPendingLoginData(null);
+      setLoginPassword("");
+      showAlert("تم تسجيل الدخول بنجاح!", "success");
+
+      // توجيه الأدمن إلى صفحة الأدمن
+      const isAdmin = resolvedRole === "Admin" || 
+                     resolvedRole === "admin" || 
+                     resolvedRole === "ADMIN" ||
+                     resolvedRole?.toLowerCase() === "admin";
+      
+      if (isAdmin) {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
+    } catch (error) {
+      console.error("Error verifying login OTP:", error);
+      showAlert(error.message || "خطأ أثناء التحقق من OTP", "error");
+    } finally {
+      setIsLoginSubmitting(false);
+    }
+  };
+
+  // إعادة إرسال OTP عند تسجيل الدخول
+  const handleResendLoginOtp = async () => {
+    if (resendCooldown > 0 || !pendingLoginData) return;
+
+    setIsLoginSubmitting(true);
+    try {
+      // إعادة استدعاء loginUser لإرسال OTP جديد
+      const res = await loginUser(pendingLoginData.email.trim(), pendingLoginData.password);
+
+      if (res?.otpRequired) {
+        showAlert("تم إرسال رمز التحقق مرة أخرى", "success");
+        setResendCooldown(60);
+      } else {
+        showAlert("تعذر إعادة إرسال رمز التحقق", "error");
+      }
+    } catch (error) {
+      console.error("Error resending login OTP:", error);
+      showAlert(error.message || "خطأ في إعادة الإرسال", "error");
+    } finally {
+      setIsLoginSubmitting(false);
     }
   };
 
@@ -584,11 +786,20 @@ const AuthCard = ({
       const data = await loginUser(trimmedEmail, trimmedPassword);
       const responseUser = data?.responseUserDTO ?? {};
 
-      console.log("Login response data:", responseUser);
-      if (responseUser?.id !== undefined) {
-        console.log("data.responseUserDTO.id:", responseUser.id);
+      console.log("Login response data:", data);
+      console.log("User role:", responseUser?.role);
+      
+      // حالة 1: يحتاج OTP (Two-Factor Authentication)
+      if (data && (data.otpRequired === true || data.otpRequired === "true")) {
+        setOtpRequired(true);
+        setResendCooldown(60);
+        setPendingLoginData({ email: trimmedEmail, password: trimmedPassword });
+        showAlert("تم إرسال رمز التحقق إلى بريدك الإلكتروني", "success");
+        setIsLoginSubmitting(false);
+        return;
       }
 
+      // حالة 2: تسجيل دخول ناجح مباشرة
       if (!data?.token) {
         const fallbackMessage =
           data?.message || "خطأ في تسجيل الدخول: تحقق من البريد الإلكتروني وكلمة المرور";
@@ -609,7 +820,37 @@ const AuthCard = ({
         responseUser.name ??
         trimmedEmail;
       const resolvedUserEmail = responseUser.email ?? trimmedEmail;
-      const resolvedRole = responseUser.role ?? data?.role ?? "User";
+      
+      // التحقق من role من جميع الأماكن المحتملة
+      let resolvedRole = 
+        responseUser.role || 
+        responseUser.Role || 
+        data?.role || 
+        data?.Role || 
+        tokenPayload?.role ||
+        tokenPayload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+        "User";
+      
+      // تحويل role إلى string و normalize (Admin, admin, ADMIN -> Admin)
+      if (resolvedRole) {
+        resolvedRole = String(resolvedRole).trim();
+        // Normalize: Admin, admin, ADMIN -> Admin
+        if (resolvedRole.toLowerCase() === "admin") {
+          resolvedRole = "Admin";
+        } else if (resolvedRole.toLowerCase() === "user") {
+          resolvedRole = "User";
+        }
+      }
+      
+      console.log("🔑 Resolved role:", resolvedRole);
+      console.log("🔑 All role sources:", {
+        responseUserRole: responseUser.role,
+        responseUserRoleCapital: responseUser.Role,
+        dataRole: data?.role,
+        dataRoleCapital: data?.Role,
+        tokenPayloadRole: tokenPayload?.role,
+        tokenPayloadClaimRole: tokenPayload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
+      });
 
       const userContextValue = {
         ...responseUser,
@@ -640,6 +881,11 @@ const AuthCard = ({
       if (resolvedUserId) {
         localStorage.setItem("idUser", resolvedUserId);
       }
+      
+      // حفظ role و userName في localStorage بشكل صريح
+      localStorage.setItem("role", resolvedRole);
+      localStorage.setItem("userName", resolvedUserName);
+      
       dispatch(
         setCredentials({
           token: data.token,
@@ -659,7 +905,24 @@ const AuthCard = ({
       setLoginPassword("");
       showAlert("تم تسجيل الدخول بنجاح!", "success");
 
+      // توجيه الأدمن إلى لوحة التحكم الإدارية
+      const isAdmin = resolvedRole === "Admin" || 
+                     resolvedRole === "admin" || 
+                     resolvedRole === "ADMIN" ||
+                     resolvedRole?.toLowerCase() === "admin";
+      
+      console.log("🎯 User role check:", {
+        resolvedRole,
+        isAdmin,
+        willNavigateTo: isAdmin ? "/admin/dashboard" : "/dashboard"
+      });
+      
+      // توجيه الأدمن إلى صفحة الأدمن، والمستخدمين العاديين إلى dashboard
+      if (isAdmin) {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
       navigate("/dashboard", { replace: true });
+      }
     } catch (error) {
       console.error("Login error:", error);
       const message = error?.message || "خطأ في تسجيل الدخول، حاول مرة أخرى لاحقاً";
@@ -956,6 +1219,67 @@ const AuthCard = ({
                 <div className="logo-card-section">
                   <img src={logoCard} alt="عرب كوديرز" className="logo-card-img" />
                 </div>
+                {otpRequired ? (
+                  <div className="otp-section">
+                    <div className="form-group">
+                      <label htmlFor="login-otp">رمز التحقق (OTP)</label>
+                      <p style={{ fontSize: "14px", color: "#666", marginBottom: "10px" }}>
+                        تم إرسال رمز التحقق إلى بريدك الإلكتروني: <strong>{pendingLoginData?.email}</strong>
+                      </p>
+                      <input
+                        type="text"
+                        id="login-otp"
+                        value={loginOtp}
+                        onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="123456"
+                        maxLength="6"
+                        disabled={isLoginSubmitting}
+                        style={{
+                          width: "100%",
+                          padding: "10px",
+                          fontSize: "18px",
+                          textAlign: "center",
+                          letterSpacing: "8px",
+                          border: "1px solid #ddd",
+                          borderRadius: "5px",
+                        }}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="button-group">
+                      <button
+                        type="button"
+                        onClick={handleVerifyLoginOtp}
+                        disabled={isLoginSubmitting || !loginOtp.trim()}
+                        className="btn btn-primary"
+                      >
+                        {isLoginSubmitting ? "جاري التحقق..." : "تحقق"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResendLoginOtp}
+                        disabled={isLoginSubmitting || resendCooldown > 0}
+                        className="btn btn-secondary"
+                      >
+                        {resendCooldown > 0
+                          ? `إعادة الإرسال بعد ${resendCooldown}s`
+                          : "إعادة إرسال رمز التحقق"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpRequired(false);
+                          setLoginOtp("");
+                          setPendingLoginData(null);
+                        }}
+                        disabled={isLoginSubmitting}
+                        className="btn btn-secondary"
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                 <form className="login-form" onSubmit={handleLoginSubmit}>
                   <div className="form-group">
                     <label htmlFor="email">البريد الإلكتروني</label>
@@ -1027,6 +1351,7 @@ const AuthCard = ({
                     </button>
                   </div>
                 </form>
+                )}
 
                 <div className="social-section">
                   <p className="or-divider">أو</p>

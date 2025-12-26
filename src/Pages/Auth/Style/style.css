@@ -2284,3 +2284,79 @@ input[type="text"]:focus {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ============================================
+   منع تأثير الدارك مود على صفحة اللوجين
+   ============================================ */
+.dark-mode .login-page,
+.dark-mode .login-page *,
+.dark-mode .auth-card,
+.dark-mode .auth-card *,
+.dark-mode .login-card-container,
+.dark-mode .login-card-container *,
+.dark-mode .card-flip-container,
+.dark-mode .card-flip-container *,
+.dark-mode .login-card,
+.dark-mode .login-card *,
+.dark-mode .signup-card-new,
+.dark-mode .signup-card-new * {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: inherit !important;
+}
+
+.dark-mode .login-card {
+  background-color: #fff !important;
+  color: #333 !important;
+}
+
+.dark-mode .login-form,
+.dark-mode .login-form *,
+.dark-mode .signup-form,
+.dark-mode .signup-form *,
+.dark-mode .form-section,
+.dark-mode .form-section *,
+.dark-mode .form-group,
+.dark-mode .form-group *,
+.dark-mode .form-group label,
+.dark-mode .form-group input,
+.dark-mode .form-group textarea,
+.dark-mode .form-group select {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: inherit !important;
+}
+
+.dark-mode .form-group input[type="email"],
+.dark-mode .form-group input[type="password"],
+.dark-mode .form-group input[type="text"],
+.dark-mode .form-group textarea,
+.dark-mode .form-group select {
+  background-color: #fff !important;
+  color: #333 !important;
+  border-color: #e5e7eb !important;
+}
+
+.dark-mode .illustration-section {
+  background: inherit !important;
+}
+
+.dark-mode .landing-header--auth,
+.dark-mode .landing-header--auth * {
+  background: linear-gradient(
+    180deg,
+    var(--landing-primary) 0%,
+    var(--landing-primary-dark) 100%
+  ) !important;
+  color: inherit !important;
+}
+
+.dark-mode .landing-footer--auth,
+.dark-mode .landing-footer--auth * {
+  background: none !important;
+  color: #fff !important;
+}
+
+.dark-mode .landing-footer--auth .landing-footer__nav a {
+  color: #fff !important;
+}

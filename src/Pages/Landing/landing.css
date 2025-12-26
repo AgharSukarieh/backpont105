@@ -10,6 +10,17 @@
 
 html {
   scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 :root {
@@ -28,13 +39,17 @@ body.landing-scroll .landing-section {
 }
 
 .landing-page {
+  width: 100%;
+  max-width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   font-family: "IBM Plex Sans Arabic", "Cairo", "Tajawal", sans-serif;
   direction: rtl;
   background-color: #ffffff;
-  overflow: hidden;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .landing-page .landing-header {
@@ -48,6 +63,8 @@ body.landing-scroll .landing-section {
   );
   z-index: 5;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .landing-nav {
@@ -171,25 +188,28 @@ body.landing-scroll .landing-section {
 .landing-hero__visual {
   position: absolute;
   min-height: 260px;
-  left: 40%;
+  left: clamp(40%, 40vw, 50%);
   top: 19%;
   z-index: 10;
+  max-width: 60%;
+  width: auto;
 }
 
 .landing-hero__card {
   position: absolute;
-  width: 450px;
+  width: min(450px, 35vw);
   height: 319px;
   border-radius: 18px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
   background: linear-gradient(150deg, #ffffff 0%, #f2f7fb 100%);
   transform: rotate(-5deg);
   overflow: hidden;
+  max-width: 450px;
 }
 
 .landing-hero__card--main {
   top: 30px;
-  right: 122px;
+  right: clamp(20px, -2vw, 122px);
 }
 
 .landing-hero__card--main::after {
@@ -615,8 +635,9 @@ body.landing-scroll .landing-section {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 120px 0 140px;
-  margin-top: -240px;
+  padding: 0;
+  margin-top: -200px;
+  position: relative;
 }
 
 .landing-section::before {
@@ -1030,6 +1051,17 @@ body.landing-scroll .landing-section {
 
   .landing-hero__card--main {
     top: 0;
+    right: unset;
+    left: 50%;
+    transform: translateX(-50%) rotate(-2deg);
+  }
+
+  .landing-hero__visual {
+    max-width: 90vw;
+  }
+
+  .landing-hero__card {
+    max-width: 380px;
   }
 
   .landing-main {
@@ -1052,6 +1084,7 @@ body.landing-scroll .landing-section {
 
   .landing-section--crafted {
     margin-top: -220px;
+    padding-bottom: clamp(60px, 8vw, 100px);
   }
 
   .landing-footer {
@@ -1349,7 +1382,37 @@ body.landing-scroll .landing-section {
 
   .landing-section--crafted {
     margin-top: -100px;
-    padding: 70px 0 100px;
+    padding: 70px 0 clamp(60px, 8vw, 100px);
+  }
+
+  .crafted-team {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    margin: 80px auto 40px;
+    width: 100%;
+  }
+
+  .crafted-team__list {
+    flex-wrap: wrap;
+    gap: clamp(8px, 2vw, 24px);
+    justify-content: center;
+  }
+
+  .crafted-team__member {
+    width: clamp(85px, 22vw, 200px);
+    min-width: clamp(85px, 22vw, 200px);
+    flex: 0 1 auto;
+  }
+
+  .crafted-team__avatar {
+    width: clamp(55px, 10vw, 130px);
+    height: clamp(55px, 10vw, 130px);
+  }
+
+  .crafted-team__name {
+    font-size: clamp(0.6rem, 1.1vw, 0.75rem);
   }
 
   .crafted-section__badge {
@@ -1637,7 +1700,47 @@ body.landing-scroll .landing-section {
 
   .landing-section--crafted {
     margin-top: -60px;
-    padding: 50px 0 80px;
+    padding: 50px 0 clamp(60px, 8vw, 100px);
+  }
+
+  .crafted-team {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    margin: 80px auto 40px;
+    width: 100%;
+  }
+
+  .crafted-team__list {
+    flex-wrap: wrap;
+    gap: clamp(6px, 1.5vw, 20px);
+    justify-content: center;
+  }
+
+  .crafted-team__member {
+    width: clamp(75px, 20vw, 180px);
+    min-width: clamp(75px, 20vw, 180px);
+    flex: 0 1 auto;
+  }
+
+  .crafted-team__avatar {
+    width: clamp(45px, 8vw, 120px);
+    height: clamp(45px, 8vw, 120px);
+  }
+
+  .crafted-team__name {
+    font-size: clamp(0.55rem, 1vw, 0.7rem);
+  }
+
+  .crafted-team__label {
+    font-size: clamp(0.95rem, 2vw, 1.1rem);
+    gap: clamp(12px, 3vw, 30px);
+  }
+
+  .crafted-team__label-icon {
+    width: clamp(40px, 5vw, 60px);
+    height: clamp(40px, 5vw, 60px);
   }
 
   .crafted-section__badge {
@@ -1657,27 +1760,34 @@ body.landing-scroll .landing-section {
   }
 
   .crafted-team {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
     width: 100%;
     margin: 80px auto 40px;
   }
 
   .crafted-team__list {
-    justify-content: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: clamp(6px, 1.5vw, 24px);
   }
 
   .crafted-team__member {
-    width: 250px;
-    min-width: 250px;
-    padding: 28px 0 0;
+    width: clamp(85px, 18vw, 200px);
+    min-width: clamp(85px, 18vw, 200px);
+    flex: 0 1 auto;
+    padding: clamp(18px, 2.2vw, 28px) 0 0;
   }
 
   .crafted-team__avatar {
-    width: 165px;
-    height: 165px;
+    width: clamp(70px, 11vw, 130px);
+    height: clamp(70px, 11vw, 130px);
   }
 
   .crafted-team__name {
-    font-size: 0.85rem;
+    font-size: clamp(0.7rem, 1vw, 0.85rem);
   }
 
   .crafted-section__logos {
@@ -1785,12 +1895,89 @@ body.landing-scroll .landing-section {
   .crafted-section__logos img {
     max-width: 60px;
   }
+
+  .crafted-team {
+    gap: clamp(16px, 2vw, 24px);
+  }
+
+  .crafted-team__label {
+    font-size: clamp(1rem, 2.2vw, 1.3rem);
+    gap: clamp(16px, 3vw, 40px);
+  }
+
+  .crafted-team__label-icon {
+    width: clamp(45px, 5.5vw, 60px);
+    height: clamp(45px, 5.5vw, 60px);
+  }
+
+  .crafted-team__list {
+    flex-wrap: wrap;
+    gap: clamp(8px, 1.5vw, 16px);
+    justify-content: center;
+  }
+
+  .crafted-team__member {
+    width: clamp(65px, 18vw, 150px);
+    min-width: clamp(65px, 18vw, 150px);
+    flex: 0 1 auto;
+    padding: clamp(12px, 1.5vw, 24px) 0 0;
+  }
+
+  .crafted-team__avatar {
+    width: clamp(40px, 7vw, 100px);
+    height: clamp(40px, 7vw, 100px);
+    border-width: clamp(2px, 0.3vw, 3px);
+  }
+
+  .crafted-team__name {
+    font-size: clamp(0.65rem, 0.9vw, 0.75rem);
+  }
 }
 
 @media (max-width: 520px) {
   .landing-section--crafted {
     margin-top: -308px;
-    padding: 50px 0 0px;
+    padding: 50px 0 clamp(60px, 8vw, 100px);
+  }
+
+  .crafted-team {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    margin: 60px auto 20px;
+    width: 100%;
+  }
+
+  .crafted-team__list {
+    flex-wrap: wrap;
+    gap: clamp(8px, 1.2vw, 16px);
+    justify-content: center;
+  }
+
+  .crafted-team__member {
+    width: clamp(65px, 18vw, 150px);
+    min-width: clamp(65px, 18vw, 150px);
+    flex: 0 1 auto;
+  }
+
+  .crafted-team__avatar {
+    width: clamp(40px, 7vw, 100px);
+    height: clamp(40px, 7vw, 100px);
+  }
+
+  .crafted-team__name {
+    font-size: clamp(0.5rem, 0.9vw, 0.65rem);
+  }
+
+  .crafted-team__label {
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
+    gap: clamp(10px, 2.5vw, 25px);
+  }
+
+  .crafted-team__label-icon {
+    width: clamp(35px, 4.5vw, 50px);
+    height: clamp(35px, 4.5vw, 50px);
   }
 }
 
@@ -2632,25 +2819,24 @@ body.landing-scroll .landing-section {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  position: absolute;
-  bottom: -36%;
-  left: 4%;
+  position: relative;
+  margin: clamp(60px, 8vw, 100px) auto 0;
 }
 
 .crafted-team__label {
-  font-size: 1.5rem;
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
   font-weight: 700;
   color: #0b4d55;
   letter-spacing: 0.01em;
   display: inline-flex;
   align-items: center;
-  gap: 53px;
+  gap: clamp(20px, 4vw, 53px);
   flex-direction: column;
 }
 
 .crafted-team__label-icon {
-  width: 70px;
-  height: 70px;
+  width: clamp(50px, 6vw, 70px);
+  height: clamp(50px, 6vw, 70px);
   object-fit: contain;
 }
 
@@ -2658,34 +2844,34 @@ body.landing-scroll .landing-section {
   display: flex;
   justify-content: center;
   align-items: stretch;
-  gap: clamp(24px, 4vw, 36px);
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  gap: clamp(8px, 2vw, 36px);
+  flex-wrap: wrap;
   padding-bottom: 8px;
 }
 
 .crafted-team__member {
-  width: 300px;
-  padding: 32px 0 0;
+  width: clamp(200px, 25vw, 300px);
+  min-width: clamp(200px, 25vw, 300px);
+  padding: clamp(20px, 2.5vw, 32px) 0 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: clamp(8px, 1vw, 12px);
   animation: craftedTeamFloat 4s ease-in-out infinite;
 }
 
 .crafted-team__avatar {
-  width: 190px;
-  height: 190px;
+  width: clamp(130px, 16vw, 190px);
+  height: clamp(130px, 16vw, 190px);
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid rgba(0, 161, 154, 0.25);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  border: clamp(3px, 0.4vw, 4px) solid rgba(0, 161, 154, 0.25);
+  box-shadow: 0 clamp(6px, 0.8vw, 10px) clamp(14px, 2vw, 24px) rgba(0, 0, 0, 0.12);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .crafted-team__name {
-  font-size: 0.95rem;
+  font-size: clamp(0.75rem, 1.2vw, 0.95rem);
   font-weight: 600;
   color: #044149;
 }
@@ -2804,4 +2990,45 @@ body.landing-scroll .landing-section {
 
 .crafted-section__lead + .crafted-section__lead {
   margin-top: -8px;
+}
+
+/* ============================================
+   منع تأثير الدارك مود على صفحة Landing
+   ============================================ */
+.dark-mode .landing-page,
+.dark-mode .landing-page * {
+  background: inherit !important;
+  color: inherit !important;
+}
+
+.dark-mode .landing-page {
+  background-color: #ffffff !important;
+}
+
+.dark-mode .landing-page .landing-header,
+.dark-mode .landing-page .landing-header * {
+  background: linear-gradient(
+    180deg,
+    var(--landing-primary) 0%,
+    var(--landing-primary-dark) 100%
+  ) !important;
+  color: var(--landing-text) !important;
+}
+
+.dark-mode .landing-page .landing-section,
+.dark-mode .landing-page .landing-section * {
+  background: inherit !important;
+  color: inherit !important;
+}
+
+.dark-mode .landing-page .landing-footer,
+.dark-mode .landing-page .landing-footer * {
+  background: inherit !important;
+  color: inherit !important;
+}
+
+.dark-mode .landing-page #explore,
+.dark-mode .landing-page #explore * {
+  background: inherit !important;
+  color: inherit !important;
 }

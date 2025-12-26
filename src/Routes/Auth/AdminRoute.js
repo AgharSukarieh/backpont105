@@ -9,7 +9,14 @@ function AdminRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role !== "Admin") {
+  // التحقق من role (Admin, admin, ADMIN)
+  const userRole = user?.role || user?.session?.role || localStorage.getItem("role");
+  const isAdmin = userRole === "Admin" || 
+                 userRole === "admin" || 
+                 userRole === "ADMIN" ||
+                 userRole?.toLowerCase() === "admin";
+  
+  if (!isAdmin) {
     return <Navigate to="/not-authorized" replace />;
   }
 

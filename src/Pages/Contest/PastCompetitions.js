@@ -8,9 +8,9 @@ import {
   Card,
   CardMedia,
   Chip,
-  Avatar,
-  CircularProgress
+  Avatar
 } from "@mui/material";
+import { CardSkeleton } from "../../Components/SkeletonLoading";
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { selectAuthSession } from "../../store/authSlice";
@@ -20,12 +20,15 @@ import PersonIcon from '@mui/icons-material/Person';
 import SchoolIcon from '@mui/icons-material/School';
 import { useNavigate } from "react-router-dom";
 import api from "../../Service/api.js";
+import { getEndedContests, getRegisteredContests } from "../../Service/contestService";
 
 export default function PastCompetitions({past}) {
   const [tab, setTab] = useState(0);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [myContests, setMyContests] = useState([]);
   const [loadingMyContests, setLoadingMyContests] = useState(false);
+  const [endedContests, setEndedContests] = useState([]);
+  const [loadingEnded, setLoadingEnded] = useState(true);
   const navigate = useNavigate();
   const session = useSelector(selectAuthSession);
   const userId = session?.responseUserDTO?.id;
@@ -71,16 +74,35 @@ export default function PastCompetitions({past}) {
     }
   };
 
+  // جلب المسابقات المنتهية من API
+  useEffect(() => {
+    const fetchEndedContests = async () => {
+      if (tab === 0) {
+        setLoadingEnded(true);
+        try {
+          const data = await getEndedContests();
+          setEndedContests(Array.isArray(data) ? data : []);
+        } catch (error) {
+          console.error("Error fetching ended contests:", error);
+          setEndedContests([]);
+        } finally {
+          setLoadingEnded(false);
+        }
+      }
+    };
+
+    fetchEndedContests();
+  }, [tab]);
+
   // جلب مسابقات المستخدم عند اختيار التبويب الثاني
   useEffect(() => {
     const fetchMyContests = async () => {
-      if (tab === 1 && userId) {
+      if (tab === 1) {
         setLoadingMyContests(true);
         try {
-          const response = await api.get(`/Contest/GetContestByUserId/${userId}`);
-          // إذا كانت الاستجابة object واحد وليس array، نحوله إلى array
-          const data = Array.isArray(response.data) ? response.data : [response.data];
-          setMyContests(data.filter(c => c !== null)); // إزالة null values
+          // استخدام endpoint الجديد لجلب المسابقات المسجلة
+          const data = await getRegisteredContests();
+          setMyContests(Array.isArray(data) ? data.filter(c => c !== null) : []);
         } catch (error) {
           console.error("Error fetching my contests:", error);
           setMyContests([]);
@@ -91,7 +113,7 @@ export default function PastCompetitions({past}) {
     };
 
     fetchMyContests();
-  }, [tab, userId]);
+  }, [tab]);
 
   return (
     <Card sx={{ p: 2, 
@@ -152,17 +174,27 @@ export default function PastCompetitions({past}) {
   </Box>
       ) : tab === 0 ? (
         
-        /* جميع المسابقات */
-        <Grid container spacing={3}>
-          {past.map((c) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} xl={2.4} key={c.id}>
+        /* جميع المسابقات المنتهية */
+        loadingEnded ? (
+          <CardSkeleton count={6} />
+        ) : endedContests.length === 0 ? (
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <Typography variant="h6" sx={{ color: "#999", mb: 2 }}>
+              لا توجد مسابقات منتهية
+            </Typography>
+          </Box>
+        ) : (
+          <Grid container spacing={3} sx={{ width: "100%" }}>
+            {endedContests.map((c) => (
+              <Grid item xs={12} sm={6} md={4} lg={4} xl={4} key={c.id} sx={{ display: "flex", width: { xs: "100%", sm: "calc(50% - 12px)", md: "calc(33.333% - 16px)" } }}>
               <Card 
                 sx={{
                   position: "relative",
                   borderRadius: 4,
                   overflow: "hidden",
                   height: "100%",
-                display: "flex",
+                  width: "100%",
+                  display: "flex",
                   flexDirection: "column",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                   transition: "all 0.3s ease",
@@ -284,16 +316,15 @@ export default function PastCompetitions({past}) {
                 </Box>
               </Card>
             </Grid>
-          ))}
-        </Grid>
+            ))}
+          </Grid>
+        )
 
       ) : (
 
         /* مسابقاتي فقط */
         loadingMyContests ? (
-          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
-            <CircularProgress />
-          </Box>
+          <CardSkeleton count={6} />
         ) : myContests.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 4 }}>
             <Typography variant="h6" sx={{ color: "#999", mb: 2 }}>
@@ -303,14 +334,15 @@ export default function PastCompetitions({past}) {
         ) : (
           <Grid container spacing={3} sx={{ width: "100%" }}>
             {myContests.map((item) => (
-            <Grid item xs={12} sm={6} md={3} lg={2.4} key={item.id} sx={{ display: "flex" }}>
+            <Grid item xs={12} sm={6} md={4} lg={4} xl={4} key={item.id} sx={{ display: "flex", width: { xs: "100%", sm: "calc(50% - 12px)", md: "calc(33.333% - 16px)" } }}>
               <Card 
               sx={{
                   position: "relative",
                   borderRadius: 4,
                   overflow: "hidden",
                   height: "100%",
-                display: "flex",
+                  width: "100%",
+                  display: "flex",
                   flexDirection: "column",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                   transition: "all 0.3s ease",

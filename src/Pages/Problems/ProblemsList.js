@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { selectAuthSession } from "../../store/authSlice";
 import { getProblemsPaging, searchProblems } from "../../Service/ProblemService";
 import { getAllTags } from "../../Service/TagServices";
+import { TableSkeleton } from "../../Components/SkeletonLoading";
 import "./problemsList.css";
 
 const ProblemsList = () => {
@@ -140,9 +141,11 @@ const ProblemsList = () => {
 
   if (loading) {
     return (
-      <div className="problems-loading">
-        <div className="problems-spinner"></div>
-        <p>جاري تحميل المسائل...</p>
+      <div className="problems-container">
+        <div className="problems-header">
+          <h1 className="problems-title">قائمة المسائل</h1>
+        </div>
+        <TableSkeleton rows={10} cols={4} />
       </div>
     );
   }

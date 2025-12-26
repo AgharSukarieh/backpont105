@@ -103,12 +103,9 @@ export default function AvailableCompetitions({ available}) {
             // حساب العرض: 3 كروت = 33.33%, 2 كروت = 50%, 1 كارت = 100%
             const cardWidth = itemCount === 1 ? "100%" : itemCount === 2 ? "calc(50% - 8px)" : "calc(33.33% - 11px)";
             
-            // تحديد حالة المسابقة
-            const now = new Date();
-            const startTime = new Date(item.startTime);
-            const endTime = new Date(item.endTime);
-            const isActive = startTime <= now && endTime > now;
-            const isUpcoming = startTime > now;
+            // تحديد حالة المسابقة من API
+            const isActive = item.status === "running";
+            const isUpcoming = item.status === "soon";
             
             // ألوان مختلفة لكل كارت مع نفس الشفافية
             const overlayColors = [
@@ -125,6 +122,7 @@ export default function AvailableCompetitions({ available}) {
             const getRemainingTime = () => {
               if (isActive && item.endTime) {
                 try {
+                  const now = new Date();
                   const end = new Date(item.endTime);
                   const diff = end - now;
                   if (diff <= 0) return "انتهت المسابقة";

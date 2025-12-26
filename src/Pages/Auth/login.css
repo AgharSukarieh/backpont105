@@ -255,3 +255,73 @@
   }
 }
 
+/* ============================================
+   منع تأثير الدارك مود على صفحة اللوجين
+   ============================================ */
+.dark-mode .login-page,
+.dark-mode .login-page * {
+  background: var(--landing-primary) !important;
+  color: inherit !important;
+}
+
+.dark-mode .login-page .landing-header--auth,
+.dark-mode .login-page .landing-header--auth * {
+  background: linear-gradient(
+    180deg,
+    var(--landing-primary) 0%,
+    var(--landing-primary-dark) 100%
+  ) !important;
+  color: inherit !important;
+}
+
+.dark-mode .login-page .landing-footer--auth,
+.dark-mode .login-page .landing-footer--auth * {
+  background: none !important;
+  color: #fff !important;
+}
+
+.dark-mode .login-page .landing-footer--auth .landing-footer__nav a {
+  color: #fff !important;
+}
+
+.dark-mode .login-page .auth-card,
+.dark-mode .login-page .auth-card *,
+.dark-mode .login-page .login-card-container,
+.dark-mode .login-page .login-card-container *,
+.dark-mode .login-page .card-flip-container,
+.dark-mode .login-page .card-flip-container *,
+.dark-mode .login-page .login-card,
+.dark-mode .login-page .login-card *,
+.dark-mode .login-page .signup-card-new,
+.dark-mode .login-page .signup-card-new * {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: inherit !important;
+}
+
+.dark-mode .login-page .login-form,
+.dark-mode .login-page .login-form *,
+.dark-mode .login-page .signup-form,
+.dark-mode .login-page .signup-form *,
+.dark-mode .login-page input,
+.dark-mode .login-page textarea,
+.dark-mode .login-page select,
+.dark-mode .login-page button {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: inherit !important;
+}
+
+.dark-mode .login-page .form-group label {
+  color: inherit !important;
+}
+
+.dark-mode .login-page .form-section {
+  background: inherit !important;
+  color: inherit !important;
+}
+
+.dark-mode .login-page .illustration-section {
+  background: inherit !important;
+}
+

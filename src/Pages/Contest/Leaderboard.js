@@ -1,10 +1,9 @@
 import { Card, Box, Typography, CardMedia } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { keyframes } from "@mui/system";
-import { API_BASE_URL } from "../../Database/URL.js";
+import { getTopCoders } from "../../Service/userService";
 import crownOne from "../../assets/crown_ one.png";
 import crownTwo from "../../assets/crown_tow.png";
 import crownThree from "../../assets/crown_three.png";
@@ -61,15 +60,18 @@ export default function Leaderboard() {
 
   
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/User/GetTopCoder`)
-      .then(res => {
-        setUsers(res.data.slice(0, 5));
+    const fetchTopCoders = async () => {
+      try {
+        const data = await getTopCoders();
+        setUsers(Array.isArray(data) ? data.slice(0, 5) : []);
         setLoading(false);
-      })
-      .catch(err => {
+      } catch (err) {
         setError(err.message);
         setLoading(false);
-      });
+      }
+    };
+    
+    fetchTopCoders();
   }, []);
 
 

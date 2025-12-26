@@ -1,115 +1,138 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { getAllTags, getExplaineTagsByTagId, getExplaineTagById } from "../../Service/TagServices";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { getAllAlgorithmsWithTags } from "../../Service/algorithmService";
 import expandRightLight from "../../assets/Expand_right_light.png";
 import vector9 from "../../assets/Vector 9.png";
+import { ListSkeleton } from "../../Components/SkeletonLoading";
 import "./algorithms.css";
 
-const Algorithms = () => {
+const Algorithms = ({ initialExpandedTagId = null }) => {
   const navigate = useNavigate();
+  const params = useParams();
+  const location = useLocation();
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedTagId, setExpandedTagId] = useState(null);
+  const [expandedTagId, setExpandedTagId] = useState(initialExpandedTagId);
   const [algorithms, setAlgorithms] = useState({});
   const [loadingAlgorithms, setLoadingAlgorithms] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
+  const tagRefs = useRef({}); // refs للتمرير إلى كل tag section
+  
+  // فتح التاغ المحدد من URL أو من props
+  useEffect(() => {
+    if (params.id) {
+      const tagIdFromUrl = Number(params.id);
+      if (!isNaN(tagIdFromUrl) && tagIdFromUrl > 0) {
+        console.log(`🔄 Opening tag ${tagIdFromUrl} from URL`);
+        setExpandedTagId(tagIdFromUrl);
+      }
+    } else if (initialExpandedTagId) {
+      console.log(`🔄 Opening tag ${initialExpandedTagId} from props`);
+      setExpandedTagId(initialExpandedTagId);
+    }
+  }, [params.id, initialExpandedTagId]);
 
   // جلب جميع التصنيفات والخوارزميات عند تحميل الصفحة
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        const data = await getAllTags();
-        console.log("📊 Tags data:", data);
-        setTags(data || []);
+        setLoading(true);
+        console.log("🔄 Starting to fetch algorithms with tags...");
         
-        // جلب الخوارزميات لكل tag مباشرة
+        // استخدام API الجديد الذي يجلب كل tag مع خوارزمياته مباشرة
+        const tagsWithAlgorithms = await getAllAlgorithmsWithTags();
+        console.log("📊 Tags with algorithms data:", tagsWithAlgorithms);
+        
+        // التحقق من أن البيانات موجودة
+        if (!tagsWithAlgorithms || !Array.isArray(tagsWithAlgorithms) || tagsWithAlgorithms.length === 0) {
+          console.warn("⚠️ No tags with algorithms found");
+          setTags([]);
+          setAlgorithms({});
+          setLoading(false);
+          return;
+        }
+        
+        // معالجة البيانات - كل عنصر هو tag مع explaineTags array
+        const processedTags = [];
         const allAlgorithms = {};
         const loadingStates = {};
         
-        for (const tag of data || []) {
-          loadingStates[tag.id] = true;
-        }
+        // تهيئة loading states لجميع tags
+        tagsWithAlgorithms.forEach(tagData => {
+          loadingStates[tagData.id] = false; // لا نحتاج loading لأن البيانات جاهزة
+        });
         setLoadingAlgorithms(loadingStates);
         
-        for (const tag of data || []) {
-          try {
-            const algos = await getExplaineTagsByTagId(tag.id);
-            console.log(`📚 Algorithms for tag ${tag.id} (${tag.tagName}):`, {
-              raw: algos,
-              isArray: Array.isArray(algos),
-              length: Array.isArray(algos) ? algos.length : 'not array',
-              type: typeof algos
-            });
-            
-            // التأكد من أن algos هي مصفوفة
-            const algorithmsArray = Array.isArray(algos) ? algos : [];
-            
-            if (algorithmsArray.length === 0) {
-              console.warn(`⚠️ No algorithms found for tag ${tag.id} (${tag.tagName})`);
-              allAlgorithms[tag.id] = [];
-              setLoadingAlgorithms((prev) => ({ ...prev, [tag.id]: false }));
-              continue;
-            }
-            
-            // جلب التفاصيل الكاملة لكل خوارزمية من GetExplaineTagById للحصول على complexity
-            const algosWithDetails = await Promise.all(
-              algorithmsArray.map(async (algo) => {
-                try {
-                  const fullDetails = await getExplaineTagById(algo.id);
-                  console.log(`🔍 Fetched details for algo ${algo.id} from GetExplaineTagById:`, {
-                    id: fullDetails.id,
-                    title: fullDetails.title,
-                    complexity: fullDetails.complexity,
-                    hasComplexity: !!fullDetails.complexity
-                  });
-                  return {
-                    ...algo,
-                    complexity: fullDetails.complexity || algo.complexity, // استخدام complexity من GetExplaineTagById
-                    overview: fullDetails.overview || algo.overview || tag.description
-                  };
-                } catch (err) {
-                  console.error(`❌ Error fetching details for algo ${algo.id}:`, err);
-                  return {
-                    ...algo,
-                    overview: algo.overview || tag.description
-                  };
-                }
-              })
-            );
-            
-            // إضافة description من الـ tag للخوارزميات
-            const algosWithDescription = algosWithDetails.map(algo => {
-              console.log(`🔍 Algorithm ${algo.id} final:`, {
-                title: algo.title,
-                complexity: algo.complexity,
-                hasComplexity: !!algo.complexity
-              });
-              return {
-                ...algo,
-                overview: algo.overview || tag.description, // استخدام description من الـ tag إذا لم يكن هناك overview
-                tagDescription: tag.description // حفظ description للاستخدام
-              };
-            });
-            
-            allAlgorithms[tag.id] = algosWithDescription;
-            console.log(`✅ Successfully loaded ${algosWithDescription.length} algorithms for tag ${tag.id} (${tag.tagName})`);
-            setLoadingAlgorithms((prev) => ({ ...prev, [tag.id]: false }));
-          } catch (err) {
-            console.error(`❌ Error fetching algorithms for tag ${tag.id} (${tag.tagName}):`, err);
-            allAlgorithms[tag.id] = [];
-            setLoadingAlgorithms((prev) => ({ ...prev, [tag.id]: false }));
+        // معالجة كل tag
+        for (const tagData of tagsWithAlgorithms) {
+          // إضافة tag للقائمة
+          processedTags.push({
+            id: tagData.id,
+            tagName: tagData.tagName,
+            shortDescription: tagData.shortDescription,
+            description: tagData.description,
+            imageURL: tagData.imageURL
+          });
+          
+          // معالجة الخوارزميات لهذا tag - استخدام البيانات الموجودة مباشرة
+          const explaineTags = tagData.explaineTags || [];
+          
+          if (explaineTags.length === 0) {
+            console.log(`ℹ️ No algorithms found for tag ${tagData.id} (${tagData.tagName})`);
+            allAlgorithms[tagData.id] = [];
+            continue;
           }
+          
+          // استخدام البيانات الموجودة مباشرة بدون جلب تفاصيل إضافية
+          // (يمكن جلب التفاصيل الكاملة عند فتح صفحة الخوارزمية)
+          allAlgorithms[tagData.id] = explaineTags.map(algo => ({
+            ...algo,
+            overview: algo.overview || algo.description || tagData.description,
+            shortDescription: algo.shortDescription || algo.title
+          }));
+          
+          console.log(`✅ Loaded ${explaineTags.length} algorithms for tag ${tagData.id} (${tagData.tagName})`);
         }
         
+        console.log(`✅ Successfully processed ${processedTags.length} tags with algorithms`);
+        setTags(processedTags);
         setAlgorithms(allAlgorithms);
       } catch (err) {
-        console.error("❌ Error fetching tags:", err);
+        console.error("❌ Error fetching tags with algorithms:", err);
+        setTags([]);
+        setAlgorithms({});
       } finally {
         setLoading(false);
       }
     };
     fetchAllData();
-  }, []);
+  }, [initialExpandedTagId]);
+  
+  // فتح التاغ والتمرير إليه بعد تحميل البيانات إذا كان هناك initialExpandedTagId
+  useEffect(() => {
+    if (initialExpandedTagId && tags.length > 0 && !loading) {
+      const tagExists = tags.some(tag => tag.id === initialExpandedTagId);
+      if (tagExists) {
+        console.log(`🔄 Auto-expanding tag ${initialExpandedTagId} after data load`);
+        setExpandedTagId(initialExpandedTagId);
+        
+        // التمرير إلى التاغ المحدد بعد فتحه
+        setTimeout(() => {
+          const tagElement = tagRefs.current[initialExpandedTagId];
+          if (tagElement) {
+            console.log(`📍 Scrolling to tag ${initialExpandedTagId}`);
+            tagElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            });
+          } else {
+            console.warn(`⚠️ Tag element not found for ID: ${initialExpandedTagId}`);
+          }
+        }, 300); // انتظار قصير لضمان أن DOM تم تحديثه
+      }
+    }
+  }, [tags, initialExpandedTagId, loading]);
 
   // الانتقال لصفحة الخوارزمية
   const goToAlgorithm = (algorithmId) => {
@@ -133,9 +156,13 @@ const Algorithms = () => {
 
   if (loading) {
     return (
-      <div className="algorithms-loading">
-        <div className="algorithms-spinner"></div>
-        <p>جاري تحميل الخوارزميات...</p>
+      <div className="algorithms-page" dir="rtl">
+        <div className="algorithms-container">
+          <div className="algorithms-search-wrapper" style={{ marginBottom: "2rem" }}>
+            <div style={{ height: "50px", backgroundColor: "#f3f4f6", borderRadius: "12px" }}></div>
+          </div>
+          <ListSkeleton count={8} />
+        </div>
       </div>
     );
   }
@@ -164,7 +191,15 @@ const Algorithms = () => {
         ) : (
           <div className="algorithms-sections">
             {filteredTags.map((tag) => (
-              <div key={tag.id} className="algorithm-section">
+              <div 
+                key={tag.id} 
+                className="algorithm-section"
+                ref={(el) => {
+                  if (el) {
+                    tagRefs.current[tag.id] = el;
+                  }
+                }}
+              >
                 {/* Tag Card */}
                 <div className="algorithm-tag-card">
                   <div className="algorithm-tag-image">

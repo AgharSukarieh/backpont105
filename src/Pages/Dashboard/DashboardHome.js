@@ -22,6 +22,7 @@ import Algorithms from "../Algorithms/Algorithms";
 import Layout from "../Contest/Layout";
 import InfluencerPage from "./InfluencerPage";
 import { fetchNotificationsByUser, getUnreadNotificationsCount } from "../../Service/NotificationServices";
+import { getEmailPreferences, updateEmailPreferences } from "../../Service/userService";
 import "../Auth/login.css";
 import "./dashboardHome.css";
 
@@ -162,6 +163,7 @@ const TAB_CONTENT = {
 const DashboardHome = () => {
   const tabs = useMemo(() => NAV_LINKS.filter((link) => TAB_CONTENT[link.id]), []);
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "explore");
+  const [expandedTagIdState, setExpandedTagIdState] = useState(null); // لحفظ expandedTagId من location.state
   const [showProfileView, setShowProfileView] = useState(false);
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
@@ -173,6 +175,14 @@ const DashboardHome = () => {
   const [notificationMenuPosition, setNotificationMenuPosition] = useState(null);
   const [notificationData, setNotificationData] = useState(null);
   const [selectedNotif, setSelectedNotif] = useState(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false);
+  const [loadingEmailPreferences, setLoadingEmailPreferences] = useState(false);
+  const [updatingEmailPreferences, setUpdatingEmailPreferences] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem("dark-mode");
+    return saved === "true";
+  });
 
   // Notification icons and colors
   const notificationIcons = {
@@ -288,6 +298,138 @@ const DashboardHome = () => {
     ensureBoxicons();
   }, []);
 
+  // Dark Mode Effect
+  useEffect(() => {
+    localStorage.setItem("dark-mode", isDarkMode.toString());
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark-mode");
+      document.body.classList.add("dark-mode");
+    } else {
+      document.documentElement.classList.remove("dark-mode");
+      document.body.classList.remove("dark-mode");
+    }
+
+    // Update inline styles for elements with light backgrounds
+    const updateInlineStyles = () => {
+      // Update elements with inline styles
+      const allElements = document.querySelectorAll('*[style]');
+      allElements.forEach((el) => {
+        const style = el.getAttribute('style') || '';
+        
+        // Check for white background (rgb(255, 255, 255) or #ffffff or #fff)
+        if (style.includes('rgb(255, 255, 255)') || style.includes('#ffffff') || (style.includes('#fff') && !style.includes('#ffff'))) {
+          if (isDarkMode) {
+            if (!el.hasAttribute('data-original-style')) {
+              el.setAttribute('data-original-style', style);
+            }
+            const computedStyle = window.getComputedStyle(document.documentElement);
+            const darkBg = computedStyle.getPropertyValue('--admin-bg-secondary').trim() || '#1e293b';
+            el.style.backgroundColor = darkBg;
+          } else {
+            const originalStyle = el.getAttribute('data-original-style');
+            if (originalStyle) {
+              el.setAttribute('style', originalStyle);
+              el.removeAttribute('data-original-style');
+            }
+          }
+        }
+        
+        // Check for light gray background (rgb(245, 245, 245) or #f5f5f5)
+        if (style.includes('rgb(245, 245, 245)') || style.includes('#f5f5f5')) {
+          if (isDarkMode) {
+            if (!el.hasAttribute('data-original-style-gray')) {
+              el.setAttribute('data-original-style-gray', style);
+            }
+            const computedStyle = window.getComputedStyle(document.documentElement);
+            const darkBg = computedStyle.getPropertyValue('--admin-bg-tertiary').trim() || '#334155';
+            el.style.backgroundColor = darkBg;
+          } else {
+            const originalStyle = el.getAttribute('data-original-style-gray');
+            if (originalStyle) {
+              el.setAttribute('style', originalStyle);
+              el.removeAttribute('data-original-style-gray');
+            }
+          }
+        }
+        
+        // Check for very light gray background (rgb(249, 249, 249) or #f9f9f9)
+        if (style.includes('rgb(249, 249, 249)') || style.includes('#f9f9f9')) {
+          if (isDarkMode) {
+            if (!el.hasAttribute('data-original-style-light-gray')) {
+              el.setAttribute('data-original-style-light-gray', style);
+            }
+            const computedStyle = window.getComputedStyle(document.documentElement);
+            const darkBg = computedStyle.getPropertyValue('--admin-bg-tertiary').trim() || '#334155';
+            el.style.backgroundColor = darkBg;
+            el.style.color = computedStyle.getPropertyValue('--admin-text-primary').trim() || '#f1f5f9';
+          } else {
+            const originalStyle = el.getAttribute('data-original-style-light-gray');
+            if (originalStyle) {
+              el.setAttribute('style', originalStyle);
+              el.removeAttribute('data-original-style-light-gray');
+            }
+          }
+        }
+        
+        // Check for gray borders (rgb(224, 224, 224) or #e0e0e0)
+        if (style.includes('rgb(224, 224, 224)') || style.includes('#e0e0e0')) {
+          if (isDarkMode) {
+            if (!el.hasAttribute('data-original-border')) {
+              el.setAttribute('data-original-border', style);
+            }
+            const computedStyle = window.getComputedStyle(document.documentElement);
+            const darkBorder = computedStyle.getPropertyValue('--admin-border-color').trim() || 'rgba(51, 65, 85, 0.8)';
+            el.style.borderColor = darkBorder;
+            // Also update if it's in border property
+            if (style.includes('border:') && style.includes('rgb(224, 224, 224)')) {
+              el.style.border = el.style.border.replace(/rgb\(224, 224, 224\)/g, darkBorder).replace(/#e0e0e0/g, darkBorder);
+            }
+          } else {
+            const originalStyle = el.getAttribute('data-original-border');
+            if (originalStyle) {
+              el.setAttribute('style', originalStyle);
+              el.removeAttribute('data-original-border');
+            }
+          }
+        }
+      });
+      
+      // Update MUI Box elements
+      const muiBoxElements = document.querySelectorAll('.MuiBox-root, [class*="MuiBox-root"]');
+      muiBoxElements.forEach((el) => {
+        const computedStyle = window.getComputedStyle(document.documentElement);
+        if (isDarkMode) {
+          // Check if element has white or light background from computed styles
+          const bgColor = window.getComputedStyle(el).backgroundColor;
+          if (bgColor === 'rgb(255, 255, 255)' || bgColor === 'rgb(245, 245, 245)' || bgColor === 'rgb(250, 250, 250)') {
+            if (!el.hasAttribute('data-original-mui-bg')) {
+              el.setAttribute('data-original-mui-bg', bgColor);
+            }
+            const darkBg = bgColor === 'rgb(255, 255, 255)' 
+              ? computedStyle.getPropertyValue('--admin-bg-secondary').trim() || '#1e293b'
+              : computedStyle.getPropertyValue('--admin-bg-tertiary').trim() || '#334155';
+            el.style.backgroundColor = darkBg;
+            el.style.color = computedStyle.getPropertyValue('--admin-text-primary').trim() || '#f1f5f9';
+          }
+        } else {
+          // Restore original background
+          const originalBg = el.getAttribute('data-original-mui-bg');
+          if (originalBg) {
+            el.style.backgroundColor = originalBg;
+            el.removeAttribute('data-original-mui-bg');
+          }
+        }
+      });
+    };
+
+    // Run after DOM updates
+    setTimeout(updateInlineStyles, 100);
+  }, [isDarkMode]);
+
+  const handleDarkModeToggle = () => {
+    setIsDarkMode((prev) => !prev);
+  };
+
   // Check if we should open profile view or specific tab based on navigation state
   useEffect(() => {
     if (location.state?.openProfile) {
@@ -296,11 +438,19 @@ const DashboardHome = () => {
       // Clear the state after using it
       window.history.replaceState({}, document.title);
     } else if (location.state?.activeTab) {
-      // إذا تم تحديد تاب معين (مثل questions)
+      // إذا تم تحديد تاب معين (مثل questions أو algorithms)
       setShowProfileView(false);
       setActiveTab(location.state.activeTab);
-      // Clear the state after using it
+      
+      // حفظ expandedTagId إذا كان موجوداً (للاستخدام في Algorithms component)
+      if (location.state.expandedTagId) {
+        setExpandedTagIdState(location.state.expandedTagId);
+        console.log(`📌 Saved expandedTagId: ${location.state.expandedTagId}`);
+      }
+      
+      // Clear the state after using it (لكن نحتفظ بـ expandedTagIdState)
       window.history.replaceState({}, document.title);
+      
       // Scroll to top
       setTimeout(() => {
         if (typeof window !== "undefined") {
@@ -518,6 +668,41 @@ const DashboardHome = () => {
     fetchUnread();
   }, []);
 
+  const handleSettingsClick = () => {
+    setProfileMenuOpen(false);
+    setShowSettingsModal(true);
+    // Fetch current email preferences
+    fetchEmailPreferences();
+  };
+
+  const fetchEmailPreferences = async () => {
+    setLoadingEmailPreferences(true);
+    try {
+      const enabled = await getEmailPreferences();
+      setEmailNotificationsEnabled(enabled);
+    } catch (err) {
+      console.error("Error fetching email preferences:", err);
+      alert(err?.message || "فشل جلب تفضيلات البريد الإلكتروني");
+    } finally {
+      setLoadingEmailPreferences(false);
+    }
+  };
+
+  const handleEmailPreferencesToggle = async (enabled) => {
+    setUpdatingEmailPreferences(true);
+    try {
+      await updateEmailPreferences(enabled);
+      setEmailNotificationsEnabled(enabled);
+    } catch (err) {
+      console.error("Error updating email preferences:", err);
+      alert(err?.message || "فشل تحديث تفضيلات البريد الإلكتروني");
+      // Revert on error
+      setEmailNotificationsEnabled(!enabled);
+    } finally {
+      setUpdatingEmailPreferences(false);
+    }
+  };
+
   const handleProfileView = () => {
     setProfileMenuOpen(false);
     setShowProfileView(true);
@@ -555,13 +740,17 @@ const DashboardHome = () => {
       // إذا كان تاب آخر، أخفِ الملف الشخصي واعرض المحتوى
       setShowProfileView(false);
       setActiveTab(tabId);
+      // إعادة تعيين expandedTagIdState عند تغيير التاب
+      if (tabId !== "algorithms") {
+        setExpandedTagIdState(null);
+      }
     }
   }, []);
 
   const activeContent = TAB_CONTENT[activeTab];
 
   return (
-    <div className={`dashboard-home ${showProfileView ? 'dashboard-home--profile-active' : ''}`}>
+    <div className={`dashboard-home ${showProfileView ? 'dashboard-home--profile-active' : ''}`} data-active-tab={activeTab}>
       <header className="landing-header landing-header--auth dashboard-home__header">
         <LandingNav
           className="landing-nav--with-divider"
@@ -641,8 +830,13 @@ const DashboardHome = () => {
                   </div>
                 )}
               </div>
-              <button className="dashboard-home__icon" title="الوضع الليلي" type="button">
-                <i className="bx bx-moon" aria-hidden="true" />
+              <button 
+                className="dashboard-home__icon" 
+                title={isDarkMode ? "الوضع الفاتح" : "الوضع الليلي"} 
+                type="button"
+                onClick={handleDarkModeToggle}
+              >
+                <i className={isDarkMode ? "bx bx-sun" : "bx bx-moon"} aria-hidden="true" />
               </button>
             </div>
           }
@@ -677,7 +871,7 @@ const DashboardHome = () => {
           <button
             type="button"
                     className="dashboard-home__profile-action"
-                    onClick={handleProfileView}
+                    onClick={handleSettingsClick}
           >
             <i className="bx bx-cog" aria-hidden="true" />
             <span>الإعدادات</span>
@@ -774,14 +968,102 @@ const DashboardHome = () => {
           </div>
         </div>
       )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="الإعدادات"
+          onClick={() => setShowSettingsModal(false)}
+        >
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowSettingsModal(false)}
+          />
+          <div
+            className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            dir="ltr"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">الإعدادات</h2>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition text-gray-600"
+                aria-label="إغلاق"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              {loadingEmailPreferences ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent"></div>
+                  <span className="mr-3 text-gray-600">جاري التحميل...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Email Notifications Toggle */}
+                  <div className="flex items-start justify-between gap-4 p-5 bg-gradient-to-l from-gray-50 to-white rounded-xl border border-gray-200 hover:border-gray-300 transition-shadow shadow-sm hover:shadow-md" dir="rtl">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-gray-900 mb-2 leading-tight">
+                        السماح بإرسال الإشعارات عبر البريد الإلكتروني
+                      </h3>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        فقط الإشعارات الحرجة والمهمّة سَتُرسل عند التمكين
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 pt-1" dir="ltr">
+                      <button
+                        onClick={() => handleEmailPreferencesToggle(!emailNotificationsEnabled)}
+                        disabled={updatingEmailPreferences}
+                        className={`relative inline-flex h-7 w-14 items-center flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                          emailNotificationsEnabled 
+                            ? "bg-indigo-600 focus:ring-indigo-500 shadow-md shadow-indigo-200" 
+                            : "bg-gray-300 focus:ring-gray-400"
+                        } ${updatingEmailPreferences ? "opacity-50 cursor-not-allowed" : "hover:shadow-lg"}`}
+                        role="switch"
+                        aria-checked={emailNotificationsEnabled}
+                        aria-label="السماح بإرسال الإشعارات عبر البريد الإلكتروني"
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition-all duration-300 ease-in-out ${
+                            emailNotificationsEnabled ? "translate-x-7" : "translate-x-1"
+                          }`}
+                        >
+                          {updatingEmailPreferences && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <svg className="animate-spin h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
-      <main className="dashboard-home__main">
+      <main className="dashboard-home__main" data-active-tab={activeTab}>
         {showProfileView ? (
           <div className="dashboard-home__profile-view">
             <UserProfile />
           </div>
         ) : (
-          <div className="dashboard-home__content">
+          <div className="dashboard-home__content" data-tab={activeTab}>
             <div className="dashboard-home__status">
               <span className="dashboard-home__status-icon dashboard-home__status-icon--primary" />
               <span className="dashboard-home__status-icon dashboard-home__status-icon--success" />
@@ -794,7 +1076,7 @@ const DashboardHome = () => {
             ) : activeTab === "questions" ? (
               <ProblemsList />
             ) : activeTab === "algorithms" ? (
-              <Algorithms />
+              <Algorithms initialExpandedTagId={expandedTagIdState || location.state?.expandedTagId} />
             ) : activeTab === "contests" ? (
               <Layout />
             ) : activeTab === "influencer" ? (

@@ -138,9 +138,21 @@
 }
 
 .influencer-page__contributions-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .influencer-page__contributions-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .influencer-page__contributions-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .influencer-page__contribution-card {
@@ -207,6 +219,86 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+/* حالة الطلب */
+.influencer-page__status {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+  width: 100%;
+}
+
+.influencer-page__status--pending {
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fbbf24;
+}
+
+.influencer-page__status--approved {
+  background: #d1fae5;
+  color: #059669;
+  border: 1px solid #10b981;
+}
+
+.influencer-page__status--rejected {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #ef4444;
+}
+
+.influencer-page__status--unknown {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+/* معلومات إضافية */
+.influencer-page__contribution-meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.influencer-page__meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.influencer-page__meta-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.influencer-page__meta-value {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* تاريخ الإنشاء */
+.influencer-page__contribution-date {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .influencer-page__contribution-meta {
+    grid-template-columns: 1fr;
+  }
 }
 
 .influencer-page__loading,

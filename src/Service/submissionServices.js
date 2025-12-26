@@ -1,12 +1,25 @@
 import api from "./api";
 
 const handelSubmission = async ({ code, idProblem, idUser }) => {
-  const response = await api.post("/Submission/HandelSubmission", {
+  try {
+    console.log("📤 Sending submission to API:", {
+      codeLength: code?.length,
+      idProblem,
+      idUser,
+    });
+    
+    const response = await api.post("/api/submissions", {
     code,
     idProblem,
     idUser,
   });
+    
+    console.log("✅ Submission response:", response.data);
   return response.data; // { status: "string", isAccepted: 0 }
+  } catch (err) {
+    console.error("❌ Submission error:", err.response?.data || err.message);
+    throw err;
+  }
 };
 
 export const getUserSubmissions = async (userId, page = 1, perPage = 12) => {
