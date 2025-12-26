@@ -1352,40 +1352,6 @@ const AuthCard = ({
                   </div>
                 </form>
                 )}
-
-                <div className="social-section">
-                  <p className="or-divider">أو</p>
-                  <p className="social-text">سجل الدخول باستخدام</p>
-                  <div className="social-icons">
-                    <button
-                      type="button"
-                      className="social-link facebook"
-                      aria-label="تسجيل الدخول عبر Facebook"
-                      onClick={() => handleSocialLogin("facebook")}
-                    >
-                      <i className="bx bxl-facebook" aria-hidden="true" />
-                      <span className="social-tooltip">Facebook</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="social-link google"
-                      aria-label="تسجيل الدخول عبر Google"
-                      onClick={() => handleSocialLogin("google")}
-                    >
-                      <i className="bx bxl-google" aria-hidden="true" />
-                      <span className="social-tooltip">Google</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="social-link linkedin"
-                      aria-label="تسجيل الدخول عبر LinkedIn"
-                      onClick={() => handleSocialLogin("linkedin")}
-                    >
-                      <i className="bx bxl-linkedin" aria-hidden="true" />
-                      <span className="social-tooltip">LinkedIn</span>
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1509,40 +1475,6 @@ const AuthCard = ({
                     </button>
                   </div>
                 </form>
-
-                <div className="social-section">
-                  <p className="or-divider">أو</p>
-                  <p className="social-text">سجل الدخول باستخدام</p>
-                  <div className="social-icons">
-                    <button
-                      type="button"
-                      className="social-link facebook"
-                      aria-label="تسجيل الدخول عبر Facebook"
-                      onClick={() => handleSocialLogin("facebook")}
-                    >
-                      <i className="bx bxl-facebook" aria-hidden="true" />
-                      <span className="social-tooltip">Facebook</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="social-link google"
-                      aria-label="تسجيل الدخول عبر Google"
-                      onClick={() => handleSocialLogin("google")}
-                    >
-                      <i className="bx bxl-google" aria-hidden="true" />
-                      <span className="social-tooltip">Google</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="social-link linkedin"
-                      aria-label="تسجيل الدخول عبر LinkedIn"
-                      onClick={() => handleSocialLogin("linkedin")}
-                    >
-                      <i className="bx bxl-linkedin" aria-hidden="true" />
-                      <span className="social-tooltip">LinkedIn</span>
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

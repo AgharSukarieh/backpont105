@@ -709,7 +709,11 @@ const LandingPage = () => {
                     ثم طبّقه مباشرة على مشاكل حقيقية لبناء مهاراتك خطوة بخطوة.
                   </strong>
                 </p>
-                <button type="button" className="discover-cta">
+                <button 
+                  type="button" 
+                  className="discover-cta"
+                  onClick={() => navigate("/dashboard", { state: { activeTab: "algorithms" } })}
+                >
                   اكتشف الآن
                 </button>
               </div>

@@ -149,12 +149,13 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: relative;
-    top: 65%;
-    left: -37%;
+    position: fixed;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 5;
     min-height: 600px;
-    margin: 45px auto;
+    margin: 0;
 }
 
 .login-card {
@@ -1007,13 +1008,35 @@ ease-in-out;
     margin-bottom: 8px;
 }
 
-.logo-card-img {
-    max-width: 146px;
+/* Logo في صفحة تسجيل الدخول (card-front) */
+.card-front .logo-card-section {
+    margin-top: -20px;
+}
+
+.card-front .logo-card-img {
+    max-width: 158px;
     width: auto;
     height: auto;
     object-fit: contain;
     display: block;
     margin: 0 auto;
+    padding-top: 17px;
+    padding-bottom: 7px;
+}
+
+/* Logo في صفحة إنشاء الحساب (card-back) */
+.card-back .logo-card-section {
+    margin-top: -20px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.card-back .form-content .logo-card-img {
+    max-width: 183px !important;
+    margin: 0 auto;
+    display: block;
 }
 
 /* Logo Section */

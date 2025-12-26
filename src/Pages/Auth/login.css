@@ -63,10 +63,6 @@
 }
 
 @media (max-width: 768px) {
-  .landing-header--auth {
-    /* padding-bottom: clamp(24px, 6vw, 40px); */
-  }
-
   .login-page__main {
     padding: clamp(24px, 8vw, 56px) clamp(12px, 6vw, 56px);
   }
@@ -134,13 +130,12 @@
 
 .login-page__main > * > .main-content {
   flex: 1;
-  min-height: auto;
+  min-height: 100vh;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 15px;
-  padding-bottom: 10px;
+  padding: 0;
   z-index: 2;
 }
 
